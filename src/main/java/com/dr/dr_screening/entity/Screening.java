@@ -31,10 +31,6 @@ public class Screening {
     @Enumerated(EnumType.STRING)
     private ScreeningStatus status;
 
-    private Double qualityScore;
-
-    private Boolean gradable;
-
     @Enumerated(EnumType.STRING)
     private DrGrade drGrade;
 
@@ -81,14 +77,6 @@ public class Screening {
         return status;
     }
 
-    public Double getQualityScore() {
-        return qualityScore;
-    }
-
-    public Boolean getGradable() {
-        return gradable;
-    }
-
     public DrGrade getDrGrade() {
         return drGrade;
     }
@@ -119,14 +107,6 @@ public class Screening {
 
     public void setStatus(ScreeningStatus status) {
         this.status = status;
-    }
-
-    public void setQualityScore(Double qualityScore) {
-        this.qualityScore = qualityScore;
-    }
-
-    public void setGradable(Boolean gradable) {
-        this.gradable = gradable;
     }
 
     public void setDrGrade(DrGrade drGrade) {

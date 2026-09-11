@@ -54,9 +54,17 @@ public class ScreeningService {
             Long patientId,
             MultipartFile image) {
 
+        // --------------------------------------------------------
+        // FIND PATIENT
+        // --------------------------------------------------------
+
         Patient patient = patientRepository.findById(patientId)
                 .orElseThrow(() ->
                         new RuntimeException("Patient not found"));
+
+        // --------------------------------------------------------
+        // VALIDATE IMAGE
+        // --------------------------------------------------------
 
         if (image == null || image.isEmpty()) {
             throw new RuntimeException("Image is empty");
@@ -77,6 +85,10 @@ public class ScreeningService {
             throw new RuntimeException(
                     "Only JPG, JPEG and PNG images are allowed");
         }
+
+        // --------------------------------------------------------
+        // SAVE IMAGE
+        // --------------------------------------------------------
 
         Path filePath;
 
@@ -110,6 +122,10 @@ public class ScreeningService {
                     "Failed to store image", e);
         }
 
+        // --------------------------------------------------------
+        // CREATE SCREENING RECORD
+        // --------------------------------------------------------
+
         Screening screening = new Screening();
 
         screening.setPatient(patient);
@@ -120,17 +136,52 @@ public class ScreeningService {
 
         try {
 
+            // ----------------------------------------------------
+            // START GRADING
+            // ----------------------------------------------------
+
             screening.setStatus(ScreeningStatus.GRADING);
+
             screeningRepository.save(screening);
+
+            // ----------------------------------------------------
+            // CALL FASTAPI ML SERVICE
+            // ----------------------------------------------------
 
             MlPredictionResponse prediction =
                     mlServiceClient.predict(filePath);
 
+            if (prediction == null) {
+                throw new RuntimeException(
+                        "ML service returned an empty response");
+            }
+
             // ----------------------------------------------------
-            // DR GRADE
+            // VALIDATE CLASS INDEX
             // ----------------------------------------------------
 
-            switch (prediction.getClass_idx()) {
+            Integer classIndex = prediction.getClass_idx();
+
+            if (classIndex == null
+                    || classIndex < 0
+                    || classIndex > 4) {
+
+                throw new RuntimeException(
+                        "Invalid DR class returned by ML service: "
+                                + classIndex);
+            }
+
+            // ----------------------------------------------------
+            // DR GRADE
+            //
+            // 0 -> No DR
+            // 1 -> Mild DR
+            // 2 -> Moderate DR
+            // 3 -> Severe DR
+            // 4 -> Proliferative DR
+            // ----------------------------------------------------
+
+            switch (classIndex) {
 
                 case 0:
                     screening.setDrGrade(DrGrade.LEVEL_0);
@@ -155,7 +206,7 @@ public class ScreeningService {
                 default:
                     throw new RuntimeException(
                             "Invalid DR class returned by ML service: "
-                                    + prediction.getClass_idx());
+                                    + classIndex);
             }
 
             // ----------------------------------------------------
@@ -176,44 +227,29 @@ public class ScreeningService {
             // PROBABILITIES
             // ----------------------------------------------------
 
-            if (prediction.getProbabilities() != null) {
+            Map<String, Double> probabilities =
+                    prediction.getProbabilities();
+
+            if (probabilities != null) {
 
                 screening.setProbabilityNoDr(
-                        prediction.getProbabilities()
-                                .get("No DR"));
+                        probabilities.get("No DR"));
 
                 screening.setProbabilityMildDr(
-                        prediction.getProbabilities()
-                                .get("Mild DR"));
+                        probabilities.get("Mild DR"));
 
                 screening.setProbabilityModerateDr(
-                        prediction.getProbabilities()
-                                .get("Moderate DR"));
+                        probabilities.get("Moderate DR"));
 
                 screening.setProbabilitySevereDr(
-                        prediction.getProbabilities()
-                                .get("Severe DR"));
+                        probabilities.get("Severe DR"));
 
                 screening.setProbabilityProliferativeDr(
-                        prediction.getProbabilities()
-                                .get("Proliferative DR"));
+                        probabilities.get("Proliferative DR"));
             }
 
             // ----------------------------------------------------
-            // QUALITY
-            // ----------------------------------------------------
-
-            /*
-             * The current ML API does not perform
-             * image quality assessment.
-             *
-             * Therefore we do NOT invent a quality score.
-             */
-
-            screening.setGradable(true);
-
-            // ----------------------------------------------------
-            // COMPLETE
+            // COMPLETE SCREENING
             // ----------------------------------------------------
 
             screening.setStatus(
@@ -222,6 +258,10 @@ public class ScreeningService {
             return screeningRepository.save(screening);
 
         } catch (Exception e) {
+
+            // ----------------------------------------------------
+            // MARK SCREENING AS FAILED
+            // ----------------------------------------------------
 
             screening.setStatus(
                     ScreeningStatus.FAILED);
@@ -248,7 +288,7 @@ public class ScreeningService {
     }
 
     // ============================================================
-    // GET IMAGE
+    // GET SCREENING IMAGE
     // ============================================================
 
     public Resource getScreeningImage(Long id) {
@@ -312,7 +352,7 @@ public class ScreeningService {
     }
 
     // ============================================================
-    // ENTITY → RESPONSE DTO
+    // ENTITY -> RESPONSE DTO
     // ============================================================
 
     public ScreeningResultResponse toResponse(
@@ -320,6 +360,10 @@ public class ScreeningService {
 
         ScreeningResultResponse response =
                 new ScreeningResultResponse();
+
+        // --------------------------------------------------------
+        // BASIC INFORMATION
+        // --------------------------------------------------------
 
         response.setId(
                 screening.getId());
@@ -330,27 +374,41 @@ public class ScreeningService {
         response.setPatientCode(
                 screening.getPatient().getPatientCode());
 
+        // --------------------------------------------------------
+        // STATUS
+        // --------------------------------------------------------
+
         response.setStatus(
                 screening.getStatus() != null
                         ? screening.getStatus().name()
                         : null);
 
-        response.setQualityScore(
-                screening.getQualityScore());
-
-        response.setGradable(
-                screening.getGradable());
+        // --------------------------------------------------------
+        // DR GRADE
+        // --------------------------------------------------------
 
         response.setDrGrade(
                 screening.getDrGrade() != null
                         ? screening.getDrGrade().name()
                         : null);
 
+        // --------------------------------------------------------
+        // CONFIDENCE
+        // --------------------------------------------------------
+
         response.setConfidence(
                 screening.getConfidence());
 
+        // --------------------------------------------------------
+        // REFERABLE DR
+        // --------------------------------------------------------
+
         response.setReferable(
                 screening.getReferable());
+
+        // --------------------------------------------------------
+        // CREATED AT
+        // --------------------------------------------------------
 
         response.setCreatedAt(
                 screening.getCreatedAt());
@@ -397,17 +455,23 @@ public class ScreeningService {
         return response;
     }
 
+    // ============================================================
+    // GET PATIENT SCREENING HISTORY
+    // ============================================================
+
     public List<ScreeningResultResponse> getPatientScreenings(
-        Long patientId) {
+            Long patientId) {
 
-    if (!patientRepository.existsById(patientId)) {
-        throw new RuntimeException("Patient not found");
+        if (!patientRepository.existsById(patientId)) {
+
+            throw new RuntimeException(
+                    "Patient not found");
+        }
+
+        return screeningRepository
+                .findByPatientIdOrderByCreatedAtDesc(patientId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
-
-    return screeningRepository
-            .findByPatientIdOrderByCreatedAtDesc(patientId)
-            .stream()
-            .map(this::toResponse)
-            .toList();
-}
 }
