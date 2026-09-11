@@ -1,0 +1,135 @@
+package com.dr.dr_screening.entity;
+
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "screenings")
+public class Screening {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "patient_id", nullable = false)
+    private Patient patient;
+
+    @Column(nullable = false)
+    private String imagePath;
+
+    @Enumerated(EnumType.STRING)
+    private ScreeningStatus status;
+
+    private Double qualityScore;
+
+    private Boolean gradable;
+
+    @Enumerated(EnumType.STRING)
+    private DrGrade drGrade;
+
+    private Double confidence;
+
+    private Boolean referable;
+
+    private LocalDateTime createdAt;
+
+    public Screening() {
+        this.createdAt = LocalDateTime.now();
+        this.status = ScreeningStatus.UPLOADED;
+    }
+
+    // getters and setters
+
+    public Long getId() {
+        return id;
+    }
+
+    public Patient getPatient() {
+        return patient;
+    }
+
+    public String getImagePath() {
+        return imagePath;
+    }
+
+    public ScreeningStatus getStatus() {
+        return status;
+    }
+
+    public Double getQualityScore() {
+        return qualityScore;
+    }
+
+    public Boolean getGradable() {
+        return gradable;
+    }
+
+    public DrGrade getDrGrade() {
+        return drGrade;
+    }
+
+    public Double getConfidence() {
+        return confidence;
+    }
+
+    public Boolean getReferable() {
+        return referable;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setPatient(Patient patient) {
+        this.patient = patient;
+    }
+
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
+    }
+
+    public void setStatus(ScreeningStatus status) {
+        this.status = status;
+    }
+
+    public void setQualityScore(Double qualityScore) {
+        this.qualityScore = qualityScore;
+    }
+
+    public void setGradable(Boolean gradable) {
+        this.gradable = gradable;
+    }
+
+    public void setDrGrade(DrGrade drGrade) {
+        this.drGrade = drGrade;
+    }
+
+    public void setConfidence(Double confidence) {
+        this.confidence = confidence;
+    }
+
+    public void setReferable(Boolean referable) {
+        this.referable = referable;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+
+}
