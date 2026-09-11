@@ -1,3 +1,13 @@
+# DR Screening
+
+## Project Structure
+
+The project is divided into two main services:
+
+- `backend/` — Spring Boot backend
+- `ml-service/` — FastAPI / PyTorch machine learning service
+
+```text
 DR-SCREENING/
 │
 ├── backend/                         ← Spring Boot
@@ -26,7 +36,7 @@ DR-SCREENING/
 │
 └── ml-service/                      ← FastAPI / PyTorch
     │
-    ├── main.py                      ← your FastAPI code
+    ├── main.py                      ← FastAPI code
     ├── dr_grading_model.pt          ← PUT THE .PT FILE HERE
     ├── requirements.txt
     │
