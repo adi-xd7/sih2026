@@ -1,6 +1,7 @@
 import io
 import os
 import cv2
+import gdown
 import numpy as np
 import torch
 import torch.nn as nn
@@ -19,6 +20,8 @@ app = FastAPI(
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_PATH = "dr_grading_model.pt"
+# Replace with your actual Google Drive File ID
+GDRIVE_FILE_ID = "1IkGlBxmnxAFuOAk7yoZ92DnulxJtzxiz"
 IMG_SIZE = 300
 
 DR_CLASS_NAMES = [
@@ -41,6 +44,19 @@ def build_model(n_classes=5):
     return model
 
 
+def download_model_if_missing():
+    """Downloads model weights from Google Drive if not locally present."""
+    if not os.path.exists(MODEL_PATH):
+        print(f"[INFO] '{MODEL_PATH}' not found. Downloading from Google Drive...")
+        url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
+        try:
+            gdown.download(url, MODEL_PATH, quiet=False)
+            print("[SUCCESS] Model downloaded successfully.")
+        except Exception as e:
+            print(f"[ERROR] Failed to download model: {e}")
+
+
+download_model_if_missing()
 model = build_model(n_classes=5)
 
 if os.path.exists(MODEL_PATH):
