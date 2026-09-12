@@ -48,25 +48,25 @@ export default function PatientHistoryModal({
     >
       <div className="space-y-4">
         {loading ? (
-          <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
-            <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs">Fetching retinal screening timeline...</p>
+          <div className="py-12 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 gap-2">
+            <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-medium">Fetching retinal screening timeline...</p>
           </div>
         ) : error ? (
-          <div className="flex items-center gap-2 rounded-xl bg-rose-500/10 border border-rose-500/20 p-4 text-xs text-rose-300">
+          <div className="flex items-center gap-2 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 p-4 text-xs text-red-800 dark:text-red-300">
             <AlertCircle className="w-4 h-4" />
             <span>{error}</span>
           </div>
         ) : screenings.length === 0 ? (
-          <div className="py-12 text-center text-slate-400 bg-slate-900/40 rounded-xl border border-slate-800">
-            <FileClock className="w-10 h-10 mx-auto mb-2 text-slate-600" />
-            <p className="text-sm font-semibold text-slate-300">No screenings recorded yet</p>
-            <p className="text-xs text-slate-500 mt-1">
+          <div className="py-12 text-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
+            <FileClock className="w-10 h-10 mx-auto mb-2 text-slate-400 dark:text-slate-500" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">No screenings recorded yet</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               This patient has no recorded retinal fundus examinations.
             </p>
           </div>
         ) : (
-          <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
+          <div className="space-y-2.5 max-h-[440px] overflow-y-auto pr-1">
             {screenings.map((sc) => {
               const formattedDate = sc.createdAt
                 ? new Date(sc.createdAt).toLocaleString('en-US', {
@@ -78,10 +78,10 @@ export default function PatientHistoryModal({
               return (
                 <div
                   key={sc.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/70 p-3.5 hover:border-slate-700 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850 p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-700 bg-black flex-shrink-0">
+                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 bg-black flex-shrink-0 shadow-xs">
                       <img
                         src={getScreeningImageUrl(sc)}
                         alt="Scan thumbnail"
@@ -93,16 +93,16 @@ export default function PatientHistoryModal({
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-white">
+                        <span className="text-xs font-mono font-bold text-slate-900 dark:text-slate-100">
                           Scan #{sc.id}
                         </span>
                         <GradeBadge grade={sc.drGrade} size="sm" />
                       </div>
-                      <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
-                        <Calendar className="w-3 h-3 text-slate-500" />
+                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
+                        <Calendar className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                         <span>{formattedDate}</span>
-                        <span className="text-slate-600">•</span>
-                        <span className="text-brand-400 font-mono">
+                        <span className="text-slate-300 dark:text-slate-600">•</span>
+                        <span className="text-teal-700 dark:text-teal-400 font-mono font-semibold">
                           {sc.confidence ? `${(sc.confidence * 100).toFixed(1)}% conf.` : ''}
                         </span>
                       </p>
@@ -118,9 +118,9 @@ export default function PatientHistoryModal({
                           onInspectScreening(sc);
                         }
                       }}
-                      className="inline-flex items-center gap-1 rounded-lg bg-slate-800 border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:text-white hover:bg-slate-700 transition-colors"
+                      className="inline-flex items-center gap-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs"
                     >
-                      <Eye className="w-3 h-3 text-brand-400" />
+                      <Eye className="w-3 h-3 text-teal-600 dark:text-teal-400" />
                       <span>Inspect</span>
                     </button>
                   </div>

@@ -124,8 +124,8 @@ export default function App() {
 
       {/* Toast Notification popup */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-2xl bg-slate-900 border border-brand-500/40 px-4 py-3 text-xs font-semibold text-white shadow-2xl shadow-brand-500/20 animate-slide-up">
-          <CheckCircle2 className="w-4 h-4 text-brand-400" />
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-2xl bg-white border border-teal-200 px-4 py-3 text-xs font-bold text-slate-800 shadow-xl shadow-slate-400/20 animate-slide-up">
+          <CheckCircle2 className="w-4 h-4 text-teal-600" />
           <span>{toastMessage}</span>
         </div>
       )}

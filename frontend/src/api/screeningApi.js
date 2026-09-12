@@ -11,15 +11,39 @@ import { SAMPLE_FUNDUS_IMAGES } from './mockData';
  * Endpoint: POST /api/screenings/upload
  * Parameters: patientId (Long), image (MultipartFile)
  */
-export async function uploadScreening(patientId, imageFile, simulatedGrade = null) {
+export async function uploadScreening(patientId, imageFile, simulatedGrade = null, previewUrl = null) {
   if (isExplicitDemoMode()) {
-    return simulateDemoInference(patientId, imageFile, simulatedGrade);
+    return simulateDemoInference(patientId, imageFile, simulatedGrade, previewUrl);
   }
 
   try {
+    let fileToUpload = imageFile;
+
+    // If imageFile is not a File/Blob instance, convert previewUrl if available
+    if ((!fileToUpload || !(fileToUpload instanceof Blob || fileToUpload instanceof File)) && previewUrl) {
+      if (previewUrl.startsWith('data:')) {
+        const byteString = atob(previewUrl.split(',')[1] || '');
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: 'image/jpeg' });
+        fileToUpload = new File([blob], 'retinal_scan.jpg', { type: 'image/jpeg' });
+      } else if (previewUrl.startsWith('blob:') || previewUrl.startsWith('http')) {
+        const res = await fetch(previewUrl);
+        const blob = await res.blob();
+        fileToUpload = new File([blob], 'retinal_scan.jpg', { type: blob.type || 'image/jpeg' });
+      }
+    }
+
+    if (!fileToUpload) {
+      throw new Error('No valid fundus image provided for screening analysis.');
+    }
+
     const formData = new FormData();
     formData.append('patientId', patientId);
-    formData.append('image', imageFile);
+    formData.append('image', fileToUpload);
 
     const res = await fetch('/api/screenings/upload', {
       method: 'POST',
@@ -35,7 +59,7 @@ export async function uploadScreening(patientId, imageFile, simulatedGrade = nul
     return data;
   } catch (err) {
     console.warn('Backend screening upload failed, falling back to local simulation:', err.message);
-    return simulateDemoInference(patientId, imageFile, simulatedGrade);
+    return simulateDemoInference(patientId, imageFile, simulatedGrade, previewUrl);
   }
 }
 
@@ -69,7 +93,7 @@ export async function fetchScreeningById(id) {
  */
 export function getScreeningImageUrl(screening) {
   if (!screening) return '';
-  if (screening.imageUrl && screening.imageUrl.startsWith('data:')) {
+  if (screening.imageUrl && (screening.imageUrl.startsWith('data:') || screening.imageUrl.startsWith('/') || screening.imageUrl.startsWith('http'))) {
     return screening.imageUrl;
   }
   if (screening.id) {
@@ -82,8 +106,6 @@ export function getScreeningImageUrl(screening) {
  * Fetch all screenings (consolidated for History/Audit views)
  */
 export async function fetchAllScreenings() {
-  // Spring Boot provides /api/patients/{id}/screenings
-  // For global history, if backend is reachable we can fetch all patients and gather their screenings
   if (isExplicitDemoMode()) {
     return getStoredScreenings();
   }
@@ -117,7 +139,7 @@ export async function fetchAllScreenings() {
 /**
  * Simulation helper for offline/demo mode
  */
-async function simulateDemoInference(patientId, imageFile, forcedGrade = null) {
+async function simulateDemoInference(patientId, imageFile, forcedGrade = null, customUrl = null) {
   const patients = getStoredPatients();
   const patient = patients.find((p) => p.id === Number(patientId)) || {
     id: patientId,
@@ -149,19 +171,19 @@ async function simulateDemoInference(patientId, imageFile, forcedGrade = null) {
   const isReferable = assignedGrade !== 'LEVEL_0' && assignedGrade !== 'LEVEL_1';
 
   // Read file as data URL if possible for instant client-side preview
-  let dataUrl = SAMPLE_FUNDUS_IMAGES[0].dataUrl;
+  let dataUrl = customUrl || SAMPLE_FUNDUS_IMAGES[0].dataUrl;
   if (imageFile instanceof File) {
     try {
       dataUrl = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
-        reader.onerror = () => resolve(SAMPLE_FUNDUS_IMAGES[0].dataUrl);
+        reader.onerror = () => resolve(customUrl || SAMPLE_FUNDUS_IMAGES[0].dataUrl);
         reader.readAsDataURL(imageFile);
       });
     } catch {
-      dataUrl = SAMPLE_FUNDUS_IMAGES[0].dataUrl;
+      dataUrl = customUrl || SAMPLE_FUNDUS_IMAGES[0].dataUrl;
     }
-  } else if (typeof imageFile === 'string' && imageFile.startsWith('data:')) {
+  } else if (typeof imageFile === 'string') {
     dataUrl = imageFile;
   }
 

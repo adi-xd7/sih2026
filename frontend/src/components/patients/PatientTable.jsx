@@ -1,17 +1,9 @@
 import React, { useState } from 'react';
 import {
   Search,
-  Filter,
-  User,
   Eye,
-  Calendar,
-  ChevronRight,
-  ShieldAlert,
-  CheckCircle2,
-  FileClock,
-  ArrowUpDown
+  FileClock
 } from 'lucide-react';
-import { GradeBadge } from '../common/Badge';
 
 export default function PatientTable({
   patients = [],
@@ -22,7 +14,6 @@ export default function PatientTable({
   const [diabeticFilter, setDiabeticFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('id-desc');
 
-  // Filtering
   const filtered = patients.filter((p) => {
     const matchesSearch =
       p.patientCode.toLowerCase().includes(search.toLowerCase()) ||
@@ -38,7 +29,6 @@ export default function PatientTable({
     return matchesSearch;
   });
 
-  // Sorting
   const sorted = [...filtered].sort((a, b) => {
     if (sortBy === 'id-desc') return b.id - a.id;
     if (sortBy === 'id-asc') return a.id - b.id;
@@ -60,39 +50,39 @@ export default function PatientTable({
             placeholder="Search by Patient Code, Age, Gender..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 pl-10 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-10 pr-4 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
           />
         </div>
 
         {/* Filter Pills */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
             <button
               onClick={() => setDiabeticFilter('ALL')}
-              className={`px-3 py-1 rounded-lg font-medium transition-all ${
+              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
                 diabeticFilter === 'ALL'
-                  ? 'bg-brand-500/20 text-brand-300 border border-brand-500/30'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white dark:bg-slate-900 text-teal-800 dark:text-teal-300 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               All ({patients.length})
             </button>
             <button
               onClick={() => setDiabeticFilter('DIABETIC')}
-              className={`px-3 py-1 rounded-lg font-medium transition-all ${
+              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
                 diabeticFilter === 'DIABETIC'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white dark:bg-slate-900 text-amber-800 dark:text-amber-300 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Diabetic
             </button>
             <button
               onClick={() => setDiabeticFilter('NON_DIABETIC')}
-              className={`px-3 py-1 rounded-lg font-medium transition-all ${
+              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
                 diabeticFilter === 'NON_DIABETIC'
-                  ? 'bg-slate-700 text-slate-200'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Non-Diabetic
@@ -103,7 +93,7 @@ export default function PatientTable({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500 cursor-pointer"
+            className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-600 cursor-pointer"
           >
             <option value="id-desc">Newest First</option>
             <option value="id-asc">Oldest First</option>
@@ -115,29 +105,29 @@ export default function PatientTable({
       </div>
 
       {/* Table Container */}
-      <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50 backdrop-blur-md">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-semibold tracking-wider">
+            <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">
               <tr>
-                <th scope="col" className="py-3 px-4">
+                <th scope="col" className="py-3.5 px-4">
                   Patient Code
                 </th>
-                <th scope="col" className="py-3 px-4">
+                <th scope="col" className="py-3.5 px-4">
                   Age & Gender
                 </th>
-                <th scope="col" className="py-3 px-4">
+                <th scope="col" className="py-3.5 px-4">
                   Diabetic Profile
                 </th>
-                <th scope="col" className="py-3 px-4 text-right">
+                <th scope="col" className="py-3.5 px-4 text-right">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="py-8 text-center text-slate-500">
+                  <td colSpan="4" className="py-8 text-center text-slate-400 dark:text-slate-500 font-medium">
                     No matching patient records found.
                   </td>
                 </tr>
@@ -145,32 +135,32 @@ export default function PatientTable({
                 sorted.map((patient) => (
                   <tr
                     key={patient.id}
-                    className="hover:bg-slate-800/40 transition-colors group"
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors group"
                   >
-                    <td className="py-3.5 px-4 font-mono font-bold text-white">
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400 font-sans font-bold">
+                        <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 flex items-center justify-center text-teal-800 dark:text-teal-300 font-sans font-bold">
                           {patient.gender === 'Female' ? 'F' : 'M'}
                         </div>
                         <span>{patient.patientCode}</span>
                       </div>
                     </td>
 
-                    <td className="py-3.5 px-4 text-slate-300">
-                      <span>{patient.age} yrs</span>
-                      <span className="text-slate-500 mx-1.5">•</span>
-                      <span className="text-slate-400">{patient.gender}</span>
+                    <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300">
+                      <span className="font-semibold">{patient.age} yrs</span>
+                      <span className="text-slate-400 dark:text-slate-600 mx-1.5">•</span>
+                      <span className="text-slate-500 dark:text-slate-400">{patient.gender}</span>
                     </td>
 
                     <td className="py-3.5 px-4">
                       {patient.diabetic ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                           Diabetic (At Risk)
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 border border-slate-700 px-2.5 py-0.5 text-[11px] font-medium text-slate-400">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500" />
                           Non-Diabetic
                         </span>
                       )}
@@ -180,16 +170,16 @@ export default function PatientTable({
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => onViewPatientHistory(patient)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-800/70 px-2.5 py-1 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs"
                           title="View all fundus screenings for this patient"
                         >
-                          <FileClock className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="hidden sm:inline">Scans</span>
+                          <FileClock className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                          <span className="hidden sm:inline font-medium">Scans</span>
                         </button>
 
                         <button
                           onClick={() => onSelectPatientForScreening(patient.id)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-brand-500/20 border border-brand-500/40 px-3 py-1 font-semibold text-brand-300 hover:bg-brand-500 hover:text-white transition-all shadow-sm"
+                          className="inline-flex items-center gap-1 rounded-lg bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 px-3 py-1 font-bold text-teal-800 dark:text-teal-300 hover:bg-teal-600 hover:text-white transition-all shadow-xs"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>Screen Now</span>

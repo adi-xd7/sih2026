@@ -11,24 +11,24 @@ export default function StatCard({
 }) {
   const colorMap = {
     teal: {
-      border: 'border-brand-500/20 hover:border-brand-500/40',
-      iconBg: 'bg-brand-500/10 text-brand-400',
-      glow: 'hover:shadow-glow-teal'
+      border: 'border-slate-200 dark:border-slate-800 hover:border-teal-300 dark:hover:border-teal-700',
+      iconBg: 'bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400',
+      badge: 'bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800'
     },
     rose: {
-      border: 'border-rose-500/20 hover:border-rose-500/40',
-      iconBg: 'bg-rose-500/10 text-rose-400',
-      glow: 'hover:shadow-glow-rose'
+      border: 'border-slate-200 dark:border-slate-800 hover:border-rose-300 dark:hover:border-rose-700',
+      iconBg: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400',
+      badge: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
     },
     amber: {
-      border: 'border-amber-500/20 hover:border-amber-500/40',
-      iconBg: 'bg-amber-500/10 text-amber-400',
-      glow: 'hover:shadow-[0_0_25px_-5px_rgba(245,158,11,0.25)]'
+      border: 'border-slate-200 dark:border-slate-800 hover:border-amber-300 dark:hover:border-amber-700',
+      iconBg: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400',
+      badge: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
     },
     purple: {
-      border: 'border-purple-500/20 hover:border-purple-500/40',
-      iconBg: 'bg-purple-500/10 text-purple-400',
-      glow: 'hover:shadow-[0_0_25px_-5px_rgba(168,85,247,0.25)]'
+      border: 'border-slate-200 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-700',
+      iconBg: 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400',
+      badge: 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
     }
   };
 
@@ -36,29 +36,29 @@ export default function StatCard({
 
   return (
     <div
-      className={`glass-panel rounded-2xl p-5 md:p-6 transition-all duration-300 ${scheme.border} ${scheme.glow}`}
+      className={`rounded-2xl p-5 md:p-6 transition-all duration-200 border bg-white dark:bg-slate-900 ${scheme.border} shadow-sm hover:shadow-md`}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           {title}
         </span>
         {Icon && (
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${scheme.iconBg}`}>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${scheme.iconBg}`}>
             <Icon className="w-5 h-5" />
           </div>
         )}
       </div>
 
       <div className="mt-4 flex items-baseline gap-2">
-        <span className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+        <span className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           {value}
         </span>
         {trend && (
           <span
-            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+            className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
               trendPositive
-                ? 'bg-emerald-500/15 text-emerald-400'
-                : 'bg-rose-500/15 text-rose-400'
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
             }`}
           >
             {trend}
@@ -67,7 +67,7 @@ export default function StatCard({
       </div>
 
       {subtitle && (
-        <p className="mt-2 text-xs text-slate-400 line-clamp-1">
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
           {subtitle}
         </p>
       )}

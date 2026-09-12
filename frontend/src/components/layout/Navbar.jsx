@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
   Activity,
-  Server,
   Zap,
   RefreshCw,
   PlusCircle,
   Menu,
   X,
-  CheckCircle2,
-  AlertCircle
+  Sun,
+  Moon
 } from 'lucide-react';
 import { checkBackendHealth, isExplicitDemoMode, setExplicitDemoMode } from '../../api/client';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function Navbar({
   currentTab,
@@ -22,6 +22,7 @@ export default function Navbar({
   const [backendHealthy, setBackendHealthy] = useState(false);
   const [checking, setChecking] = useState(false);
   const [demoMode, setDemoMode] = useState(isExplicitDemoMode());
+  const { theme, toggleTheme } = useTheme();
 
   const testConnection = async () => {
     setChecking(true);
@@ -32,7 +33,7 @@ export default function Navbar({
 
   useEffect(() => {
     testConnection();
-    const interval = setInterval(testConnection, 30000); // ping every 30s
+    const interval = setInterval(testConnection, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -44,13 +45,13 @@ export default function Navbar({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/90 backdrop-blur-md transition-colors">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand & Logo */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 lg:hidden"
+            className="rounded-lg p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden"
             aria-label="Toggle Navigation Menu"
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -60,31 +61,29 @@ export default function Navbar({
             onClick={() => setCurrentTab('dashboard')}
             className="flex items-center gap-2.5 cursor-pointer group"
           >
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-cyan-400 p-0.5 shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform">
-              <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-slate-950">
-                <Activity className="h-5 w-5 text-brand-400 animate-pulse" />
-              </div>
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600 shadow-sm text-white group-hover:scale-105 transition-transform">
+              <Activity className="h-5 w-5 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-base font-extrabold tracking-tight text-white font-sans">
-                  Retina<span className="text-brand-400">AI</span>
+                <span className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
+                  Retina<span className="text-teal-600 dark:text-teal-400">AI</span>
                 </span>
-                <span className="rounded bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-400 border border-brand-500/20">
+                <span className="rounded bg-teal-50 dark:bg-teal-950/60 px-1.5 py-0.5 text-[10px] font-bold text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
                   SIH 2026
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                Diabetic Retinopathy Intelligence
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
+                Diabetic Retinopathy Diagnostic Platform
               </p>
             </div>
           </div>
         </div>
 
         {/* Right Action & Status Bar */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Backend Status Pill */}
-          <div className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/90 px-3 py-1.5 text-xs text-slate-300">
+          <div className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300">
             <div className="flex items-center gap-1.5">
               <span className="relative flex h-2 w-2">
                 {backendHealthy && !demoMode ? (
@@ -99,48 +98,62 @@ export default function Navbar({
                   </>
                 )}
               </span>
-              <span className="hidden md:inline font-mono">
+              <span className="hidden md:inline font-mono font-medium">
                 {demoMode
                   ? 'Demo Mode (Mock DB)'
                   : backendHealthy
-                  ? 'Spring Boot Online :8080'
-                  : 'Backend Offline (Fallback Active)'}
+                  ? 'Spring Boot Live :8080'
+                  : 'Backend Offline (Demo)'}
               </span>
-              <span className="md:hidden font-mono">
-                {backendHealthy && !demoMode ? ':8080 Live' : 'Demo'}
+              <span className="md:hidden font-mono font-medium">
+                {backendHealthy && !demoMode ? ':8080' : 'Demo'}
               </span>
             </div>
 
             <button
               onClick={testConnection}
               title="Ping Spring Boot Backend"
-              className="text-slate-400 hover:text-brand-400 transition-colors"
+              className="text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
             >
-              <RefreshCw className={`w-3 h-3 ${checking ? 'animate-spin text-brand-400' : ''}`} />
+              <RefreshCw className={`w-3 h-3 ${checking ? 'animate-spin text-teal-600' : ''}`} />
             </button>
 
             <button
               onClick={handleToggleDemoMode}
-              className="ml-1 text-[10px] uppercase font-semibold tracking-wider text-slate-400 hover:text-white underline decoration-slate-600 hover:decoration-brand-400"
+              className="ml-1 text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 hover:text-teal-700 dark:hover:text-teal-300 underline decoration-slate-300 dark:decoration-slate-700 hover:decoration-teal-600"
               title="Toggle between real Spring Boot API and offline interactive mock"
             >
-              {demoMode ? 'Use Live API' : 'Use Demo DB'}
+              {demoMode ? 'Live API' : 'Demo DB'}
             </button>
           </div>
+
+          {/* Theme Switcher Toggle (Light / Dark) */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-xs"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            aria-label="Toggle Theme"
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-4 h-4 text-slate-600" />
+            )}
+          </button>
 
           {/* New Patient CTA */}
           <button
             onClick={onOpenPatientModal}
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700/80 hover:text-white transition-all shadow-sm"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm"
           >
-            <PlusCircle className="w-3.5 h-3.5 text-brand-400" />
-            New Patient
+            <PlusCircle className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+            <span>New Patient</span>
           </button>
 
           {/* Quick Screening Action */}
           <button
             onClick={() => setCurrentTab('screening')}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-500 to-cyan-500 px-3.5 py-1.5 text-xs font-bold text-white hover:from-brand-600 hover:to-cyan-600 transition-all shadow-md shadow-brand-500/25 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-3.5 py-1.5 text-xs font-bold transition-all shadow-sm active:scale-95"
           >
             <Zap className="w-3.5 h-3.5" />
             <span>AI Screen</span>
