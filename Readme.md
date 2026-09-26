@@ -48,3 +48,22 @@ DR-SCREENING/
     │
     └── inference/
         └── ...
+
+1. Frontend
+cd D:\dr-screening\frontend
+npx vite
+
+Open: http://localhost:5173
+
+2. Spring Boot backend
+cd D:\dr-screening
+.\mvnw.cmd spring-boot:run
+
+Runs on: http://localhost:8080
+
+3. ML / FastAPI service
+cd D:\dr-screening\ml-service
+.\venv\Scripts\activate
+uvicorn main:app --reload --port 8000
+
+Runs on: http://localhost:8000

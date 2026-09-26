@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,14 @@ public class ScreeningService {
     private final Path uploadDirectory =
             Paths.get("uploads").toAbsolutePath().normalize();
 
+    private final Path heatmapDirectory =
+            uploadDirectory.resolve("heatmaps");
+
+
+    // ============================================================
+    // CONSTRUCTOR
+    // ============================================================
+
     public ScreeningService(
             ScreeningRepository screeningRepository,
             PatientRepository patientRepository,
@@ -45,6 +54,7 @@ public class ScreeningService {
         this.patientRepository = patientRepository;
         this.mlServiceClient = mlServiceClient;
     }
+
 
     // ============================================================
     // CREATE SCREENING
@@ -61,6 +71,7 @@ public class ScreeningService {
         Patient patient = patientRepository.findById(patientId)
                 .orElseThrow(() ->
                         new RuntimeException("Patient not found"));
+
 
         // --------------------------------------------------------
         // VALIDATE IMAGE
@@ -86,8 +97,9 @@ public class ScreeningService {
                     "Only JPG, JPEG and PNG images are allowed");
         }
 
+
         // --------------------------------------------------------
-        // SAVE IMAGE
+        // SAVE ORIGINAL IMAGE
         // --------------------------------------------------------
 
         Path filePath;
@@ -122,6 +134,7 @@ public class ScreeningService {
                     "Failed to store image", e);
         }
 
+
         // --------------------------------------------------------
         // CREATE SCREENING RECORD
         // --------------------------------------------------------
@@ -129,10 +142,16 @@ public class ScreeningService {
         Screening screening = new Screening();
 
         screening.setPatient(patient);
-        screening.setImagePath(filePath.toString());
-        screening.setStatus(ScreeningStatus.UPLOADED);
 
-        screening = screeningRepository.save(screening);
+        screening.setImagePath(
+                filePath.toString());
+
+        screening.setStatus(
+                ScreeningStatus.UPLOADED);
+
+        screening =
+                screeningRepository.save(screening);
+
 
         try {
 
@@ -140,9 +159,11 @@ public class ScreeningService {
             // START GRADING
             // ----------------------------------------------------
 
-            screening.setStatus(ScreeningStatus.GRADING);
+            screening.setStatus(
+                    ScreeningStatus.GRADING);
 
             screeningRepository.save(screening);
+
 
             // ----------------------------------------------------
             // CALL FASTAPI ML SERVICE
@@ -152,15 +173,18 @@ public class ScreeningService {
                     mlServiceClient.predict(filePath);
 
             if (prediction == null) {
+
                 throw new RuntimeException(
                         "ML service returned an empty response");
             }
+
 
             // ----------------------------------------------------
             // VALIDATE CLASS INDEX
             // ----------------------------------------------------
 
-            Integer classIndex = prediction.getClass_idx();
+            Integer classIndex =
+                    prediction.getClass_idx();
 
             if (classIndex == null
                     || classIndex < 0
@@ -170,6 +194,7 @@ public class ScreeningService {
                         "Invalid DR class returned by ML service: "
                                 + classIndex);
             }
+
 
             // ----------------------------------------------------
             // DR GRADE
@@ -184,23 +209,28 @@ public class ScreeningService {
             switch (classIndex) {
 
                 case 0:
-                    screening.setDrGrade(DrGrade.LEVEL_0);
+                    screening.setDrGrade(
+                            DrGrade.LEVEL_0);
                     break;
 
                 case 1:
-                    screening.setDrGrade(DrGrade.LEVEL_1);
+                    screening.setDrGrade(
+                            DrGrade.LEVEL_1);
                     break;
 
                 case 2:
-                    screening.setDrGrade(DrGrade.LEVEL_2);
+                    screening.setDrGrade(
+                            DrGrade.LEVEL_2);
                     break;
 
                 case 3:
-                    screening.setDrGrade(DrGrade.LEVEL_3);
+                    screening.setDrGrade(
+                            DrGrade.LEVEL_3);
                     break;
 
                 case 4:
-                    screening.setDrGrade(DrGrade.LEVEL_4);
+                    screening.setDrGrade(
+                            DrGrade.LEVEL_4);
                     break;
 
                 default:
@@ -209,6 +239,7 @@ public class ScreeningService {
                                     + classIndex);
             }
 
+
             // ----------------------------------------------------
             // CONFIDENCE
             // ----------------------------------------------------
@@ -216,12 +247,14 @@ public class ScreeningService {
             screening.setConfidence(
                     prediction.getConfidence());
 
+
             // ----------------------------------------------------
             // REFERABLE DR
             // ----------------------------------------------------
 
             screening.setReferable(
                     prediction.getReferable_dr());
+
 
             // ----------------------------------------------------
             // PROBABILITIES
@@ -248,6 +281,26 @@ public class ScreeningService {
                         probabilities.get("Proliferative DR"));
             }
 
+
+            // ----------------------------------------------------
+            // SAVE GRAD-CAM HEATMAP
+            // ----------------------------------------------------
+
+            String heatmapImage =
+                    prediction.getHeatmap_image();
+
+            if (heatmapImage != null
+                    && !heatmapImage.isBlank()) {
+
+                String heatmapPath =
+                        saveHeatmapImage(
+                                heatmapImage);
+
+                screening.setHeatmapPath(
+                        heatmapPath);
+            }
+
+
             // ----------------------------------------------------
             // COMPLETE SCREENING
             // ----------------------------------------------------
@@ -256,6 +309,7 @@ public class ScreeningService {
                     ScreeningStatus.COMPLETED);
 
             return screeningRepository.save(screening);
+
 
         } catch (Exception e) {
 
@@ -275,6 +329,69 @@ public class ScreeningService {
         }
     }
 
+
+    // ============================================================
+    // SAVE HEATMAP
+    // ============================================================
+
+    private String saveHeatmapImage(
+            String heatmapImage) {
+
+        try {
+
+            Files.createDirectories(
+                    heatmapDirectory);
+
+            String base64Data =
+                    heatmapImage;
+
+            /*
+             * FastAPI returns:
+             *
+             * data:image/png;base64,<BASE64_DATA>
+             *
+             * Remove the data URL prefix before decoding.
+             */
+
+            if (base64Data.startsWith("data:image")) {
+
+                int commaIndex =
+                        base64Data.indexOf(',');
+
+                if (commaIndex >= 0) {
+
+                    base64Data =
+                            base64Data.substring(
+                                    commaIndex + 1);
+                }
+            }
+
+            byte[] imageBytes =
+                    Base64.getDecoder().decode(
+                            base64Data);
+
+            String filename =
+                    UUID.randomUUID()
+                            + "_heatmap.png";
+
+            Path heatmapPath =
+                    heatmapDirectory.resolve(filename);
+
+            Files.write(
+                    heatmapPath,
+                    imageBytes);
+
+            return heatmapPath.toString();
+
+        } catch (Exception e) {
+
+            throw new RuntimeException(
+                    "Failed to save Grad-CAM heatmap",
+                    e);
+        }
+    }
+
+
     // ============================================================
     // GET SCREENING
     // ============================================================
@@ -287,8 +404,9 @@ public class ScreeningService {
                                 "Screening not found"));
     }
 
+
     // ============================================================
-    // GET SCREENING IMAGE
+    // GET ORIGINAL SCREENING IMAGE
     // ============================================================
 
     public Resource getScreeningImage(Long id) {
@@ -325,8 +443,57 @@ public class ScreeningService {
         }
     }
 
+
     // ============================================================
-    // IMAGE MEDIA TYPE
+    // GET HEATMAP IMAGE
+    // ============================================================
+
+    public Resource getScreeningHeatmap(Long id) {
+
+        Screening screening =
+                getScreeningById(id);
+
+        String heatmapPath =
+                screening.getHeatmapPath();
+
+        if (heatmapPath == null
+                || heatmapPath.isBlank()) {
+
+            throw new RuntimeException(
+                    "Heatmap is not available for this screening");
+        }
+
+        try {
+
+            Path imagePath =
+                    Paths.get(heatmapPath)
+                            .toAbsolutePath()
+                            .normalize();
+
+            Resource resource =
+                    new UrlResource(
+                            imagePath.toUri());
+
+            if (!resource.exists()
+                    || !resource.isReadable()) {
+
+                throw new RuntimeException(
+                        "Heatmap file not found");
+            }
+
+            return resource;
+
+        } catch (Exception e) {
+
+            throw new RuntimeException(
+                    "Failed to load screening heatmap",
+                    e);
+        }
+    }
+
+
+    // ============================================================
+    // ORIGINAL IMAGE MEDIA TYPE
     // ============================================================
 
     public MediaType getImageMediaType(Long id) {
@@ -351,6 +518,22 @@ public class ScreeningService {
         return MediaType.APPLICATION_OCTET_STREAM;
     }
 
+
+    // ============================================================
+    // HEATMAP MEDIA TYPE
+    // ============================================================
+
+    public MediaType getHeatmapMediaType(Long id) {
+
+        /*
+         * Heatmaps generated by FastAPI are always
+         * stored as PNG files.
+         */
+
+        return MediaType.IMAGE_PNG;
+    }
+
+
     // ============================================================
     // ENTITY -> RESPONSE DTO
     // ============================================================
@@ -360,6 +543,7 @@ public class ScreeningService {
 
         ScreeningResultResponse response =
                 new ScreeningResultResponse();
+
 
         // --------------------------------------------------------
         // BASIC INFORMATION
@@ -374,6 +558,7 @@ public class ScreeningService {
         response.setPatientCode(
                 screening.getPatient().getPatientCode());
 
+
         // --------------------------------------------------------
         // STATUS
         // --------------------------------------------------------
@@ -382,6 +567,7 @@ public class ScreeningService {
                 screening.getStatus() != null
                         ? screening.getStatus().name()
                         : null);
+
 
         // --------------------------------------------------------
         // DR GRADE
@@ -392,12 +578,14 @@ public class ScreeningService {
                         ? screening.getDrGrade().name()
                         : null);
 
+
         // --------------------------------------------------------
         // CONFIDENCE
         // --------------------------------------------------------
 
         response.setConfidence(
                 screening.getConfidence());
+
 
         // --------------------------------------------------------
         // REFERABLE DR
@@ -406,6 +594,7 @@ public class ScreeningService {
         response.setReferable(
                 screening.getReferable());
 
+
         // --------------------------------------------------------
         // CREATED AT
         // --------------------------------------------------------
@@ -413,14 +602,30 @@ public class ScreeningService {
         response.setCreatedAt(
                 screening.getCreatedAt());
 
+
         // --------------------------------------------------------
-        // IMAGE URL
+        // ORIGINAL IMAGE URL
         // --------------------------------------------------------
 
         response.setImageUrl(
                 "/api/screenings/"
                         + screening.getId()
                         + "/image");
+
+
+        // --------------------------------------------------------
+        // HEATMAP URL
+        // --------------------------------------------------------
+
+        if (screening.getHeatmapPath() != null
+                && !screening.getHeatmapPath().isBlank()) {
+
+            response.setHeatmapUrl(
+                    "/api/screenings/"
+                            + screening.getId()
+                            + "/heatmap");
+        }
+
 
         // --------------------------------------------------------
         // PROBABILITIES
@@ -452,8 +657,10 @@ public class ScreeningService {
         response.setProbabilities(
                 probabilities);
 
+
         return response;
     }
+
 
     // ============================================================
     // GET PATIENT SCREENING HISTORY
@@ -469,7 +676,8 @@ public class ScreeningService {
         }
 
         return screeningRepository
-                .findByPatientIdOrderByCreatedAtDesc(patientId)
+                .findByPatientIdOrderByCreatedAtDesc(
+                        patientId)
                 .stream()
                 .map(this::toResponse)
                 .toList();

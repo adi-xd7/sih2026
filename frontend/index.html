@@ -1,14 +1,1203 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230d9488' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='3'></circle><path d='M3 12h1m16 0h1M12 3v1m0 16v1m-6.36-13.64l.7.7m11.32 11.32l.7.7m-12.72 0l.7-.7m11.32-11.32l.7-.7'/></svg>" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="RetinaAI — Clinical-Grade Diabetic Retinopathy Screening & Deep Learning Analysis Platform" />
-    <title>RetinaAI — Diabetic Retinopathy Screening Platform</title>
-  </head>
-  <body class="bg-slate-50 text-slate-800 antialiased selection:bg-teal-500 selection:text-white">
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VisionSaathi &mdash; Diabetic Retinopathy Screening</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --dusk-1:#211936;
+    --dusk-2:#4f3561;
+    --dusk-3:#b87872;
+    --paper:#f4f0fa;
+    --card:rgba(255,255,255,0.58);
+    --line:rgba(255,255,255,0.68);
+    --line-soft:rgba(255,255,255,0.45);
+    --ink:#211832;
+    --muted:#6c627d;
+    --muted-2:#958ca5;
+    --accent:#cf5a2d;
+    --accent-ink:#9c4520;
+    --teal:#278f83;
+    --gold:#c9932e;
+    --rose:#c85c81;
+    --crimson:#b6334a;
+    --maroon:#6e1f31;
+    --ok-bg:rgba(234,246,242,0.72);
+    --warn-bg:rgba(253,241,226,0.78);
+    --bad-bg:rgba(251,233,234,0.78);
+    --radius-lg:20px;
+    --radius-md:12px;
+    --radius-sm:7px;
+    --glass-border:1px solid rgba(255,255,255,0.68);
+    --glass-shadow:0 18px 45px -28px rgba(37,26,63,0.38);
+    --glass-blur:blur(18px);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background:
+      radial-gradient(circle at 8% 8%, rgba(201,138,127,0.24), transparent 28%),
+      radial-gradient(circle at 88% 18%, rgba(90,58,99,0.18), transparent 30%),
+      radial-gradient(circle at 72% 88%, rgba(207,90,45,0.10), transparent 25%),
+      linear-gradient(135deg,#f8f5fc 0%,#eee9f6 48%,#f8f4fa 100%);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    position:relative;
+  }
+  body::before,
+  body::after{
+    content:"";
+    position:fixed;
+    width:280px;
+    height:280px;
+    border-radius:50%;
+    filter:blur(4px);
+    pointer-events:none;
+    z-index:-1;
+  }
+  body::before{
+    left:-100px;
+    bottom:5%;
+    background:rgba(201,138,127,0.13);
+  }
+  body::after{
+    right:-100px;
+    top:8%;
+    background:rgba(90,58,99,0.12);
+  }
+  h1,h2,h3,.serif{
+    font-family:'Fraunces', Georgia, 'Times New Roman', serif;
+    font-weight:500;
+    letter-spacing:-0.01em;
+    margin:0;
+  }
+  .mono{ font-family:'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace; }
+  a{ color:inherit; }
+  button{ font-family:inherit; }
+
+  /* ---------- Shell ---------- */
+  #shell{ display:flex; min-height:100vh; }
+  #sidebar{
+    width:248px;
+    flex:none;
+    background:
+      linear-gradient(165deg,rgba(37,26,63,0.92),rgba(90,58,99,0.78) 62%,rgba(201,138,127,0.68)),
+      rgba(37,26,63,0.70);
+    backdrop-filter:blur(22px) saturate(135%);
+    -webkit-backdrop-filter:blur(22px) saturate(135%);
+    border-right:1px solid rgba(255,255,255,0.18);
+    box-shadow:12px 0 40px -28px rgba(37,26,63,0.55);
+    color:#f4eef7;
+    padding:28px 22px 22px;
+    display:flex;
+    flex-direction:column;
+    position:sticky;
+    top:0;
+    height:100vh;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:36px;
+  }
+  .brand svg{ flex:none; }
+  .brand-name{ font-family:'Fraunces', serif; font-size:19px; font-weight:500; line-height:1.1; }
+  .brand-sub{ font-size:10.5px; color:rgba(244,238,247,0.55); letter-spacing:0.04em; margin-top:2px; }
+
+  nav.mainnav{ display:flex; flex-direction:column; gap:2px; }
+  nav.mainnav a{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 10px;
+    border-radius:8px;
+    text-decoration:none;
+    font-size:13.5px;
+    color:rgba(244,238,247,0.72);
+    transition:background 0.15s ease, color 0.15s ease;
+  }
+  nav.mainnav a svg{ opacity:0.85; flex:none; }
+  nav.mainnav a:hover{ background:rgba(255,255,255,0.08); color:#fff; }
+  nav.mainnav a.active{ background:rgba(255,255,255,0.14); color:#fff; }
+
+  .side-divider{ height:1px; background:rgba(244,238,247,0.14); margin:18px 0; }
+
+  .side-footer{ margin-top:auto; }
+  .conn-row{
+    display:flex; align-items:center; gap:7px;
+    font-size:11px; color:rgba(244,238,247,0.55);
+    margin-bottom:10px;
+  }
+  .conn-dot{ width:7px; height:7px; border-radius:50%; background:#5fbf9f; flex:none; }
+  .conn-dot.off{ background:#d16b6b; }
+  .api-config-btn{
+    width:100%; text-align:left;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.14);
+    color:rgba(244,238,247,0.8);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:11.5px;
+    cursor:pointer;
+  }
+  .api-config-btn:hover{ background:rgba(255,255,255,0.12); }
+
+  #main{
+    flex:1;
+    min-width:0;
+    padding:40px 48px 80px;
+    max-width:1080px;
+  }
+  .page-head{ margin-bottom:28px; }
+  .page-head h1{ font-size:28px; }
+  .page-head p{ color:var(--muted); font-size:14px; margin-top:6px; max-width:60ch; line-height:1.5; }
+  .crumb{ font-size:12px; color:var(--muted-2); margin-bottom:10px; }
+  .crumb a{ text-decoration:none; color:var(--muted-2); }
+  .crumb a:hover{ color:var(--accent-ink); }
+
+  /* ---------- Buttons / inputs ---------- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:7px;
+    border-radius:9px; border:1px solid transparent;
+    padding:10px 18px; font-size:13.5px; font-weight:600;
+    cursor:pointer; text-decoration:none;
+    transition:transform 0.08s ease, filter 0.12s ease;
+  }
+  .btn:active{ transform:translateY(1px); }
+  .btn-primary{ background:var(--accent); color:#fff; }
+  .btn-primary:hover{ filter:brightness(1.06); }
+  .btn-primary:disabled{ background:#d9c3b8; cursor:not-allowed; }
+  .btn-ghost{ background:transparent; color:var(--ink); border-color:var(--line); }
+  .btn-ghost:hover{ background:var(--line-soft); }
+  .btn-sm{ padding:6px 12px; font-size:12.5px; }
+
+  label.field-label{ display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:6px; }
+  input[type=text], input[type=number], select{
+    width:100%;
+    padding:10px 12px;
+    border-radius:9px;
+    border:1px solid rgba(255,255,255,0.72);
+    background:rgba(255,255,255,0.62);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.55), 0 8px 20px -18px rgba(37,26,63,0.35);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    font-size:14px;
+    color:var(--ink);
+    font-family:inherit;
+  }
+  input:focus, select:focus{ outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
+  .field{ margin-bottom:16px; }
+  .field-row{ display:flex; gap:16px; }
+  .field-row .field{ flex:1; }
+  .checkbox-row{ display:flex; align-items:center; gap:9px; margin-bottom:16px; }
+  .checkbox-row input{ width:16px; height:16px; }
+  .checkbox-row label{ font-size:14px; }
+
+  /* ---------- Cards ---------- */
+  .card{
+    background:var(--card);
+    border:var(--glass-border);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--glass-shadow);
+    backdrop-filter:var(--glass-blur) saturate(125%);
+    -webkit-backdrop-filter:var(--glass-blur) saturate(125%);
+  }
+  .card-pad{ padding:26px; }
+
+  .stat-row{ display:flex; gap:16px; margin-bottom:30px; flex-wrap:wrap; }
+  .stat{
+    flex:1; min-width:150px;
+    background:rgba(255,255,255,0.52);
+    border:var(--glass-border);
+    border-radius:var(--radius-md);
+    padding:16px 18px;
+    box-shadow:0 12px 30px -24px rgba(37,26,63,0.40);
+    backdrop-filter:var(--glass-blur) saturate(125%);
+    -webkit-backdrop-filter:var(--glass-blur) saturate(125%);
+  }
+  .stat .num{ font-family:'Fraunces', serif; font-size:28px; }
+  .stat .lbl{ font-size:12px; color:var(--muted); margin-top:3px; }
+
+  .empty{
+    border:1px dashed var(--line); border-radius:var(--radius-md);
+    padding:36px 20px; text-align:center; color:var(--muted); font-size:13.5px;
+  }
+  .empty .btn{ margin-top:14px; }
+
+  /* ---------- Patient list ---------- */
+  .list-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; gap:12px; }
+  .search-input{ max-width:260px; }
+  table.data{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  table.data th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--muted-2); font-weight:600; padding:0 14px 10px; border-bottom:1px solid var(--line);
+  }
+  table.data td{ padding:13px 14px; border-bottom:1px solid var(--line-soft); vertical-align:middle; }
+  table.data tr:last-child td{ border-bottom:none; }
+  table.data tbody tr{ cursor:pointer; }
+  table.data tbody tr:hover{ background:rgba(255,255,255,0.38); }
+  .code-pill{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; font-weight:600;
+    background:var(--line-soft); padding:3px 8px; border-radius:6px; display:inline-block;
+  }
+
+  /* ---------- Badges ---------- */
+  .badge{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:100px; font-size:12px; font-weight:600; }
+  .badge-dot{ width:7px; height:7px; border-radius:50%; }
+  .badge.status-uploaded{ background:#f0ecf9; color:#5a4a7a; }
+  .badge.status-grading{ background:var(--warn-bg); color:#a3702a; }
+  .badge.status-completed{ background:var(--ok-bg); color:#1f7a6c; }
+  .badge.status-failed{ background:var(--bad-bg); color:#a33345; }
+
+  .badge.ref-yes{ background:var(--bad-bg); color:#a33345; }
+  .badge.ref-no{ background:var(--ok-bg); color:#1f7a6c; }
+
+  .grade-chip{ display:inline-flex; align-items:center; gap:7px; font-weight:600; font-size:13px; }
+  .grade-chip .sw{ width:10px; height:10px; border-radius:3px; flex:none; }
+
+  /* ---------- Upload dropzone ---------- */
+  .dropzone{
+    border:1.5px dashed rgba(90,58,99,0.30);
+    border-radius:var(--radius-md);
+    padding:38px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+    background:rgba(255,255,255,0.38);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
+  .dropzone:hover{
+    background:rgba(255,255,255,0.56);
+    transform:translateY(-1px);
+  }
+  .dropzone.drag{ border-color:var(--accent); background:#fdf3ee; }
+  .dropzone svg{ margin-bottom:10px; }
+  .dropzone .hint{ font-size:12px; color:var(--muted-2); margin-top:4px; }
+  .preview-wrap{ display:flex; gap:20px; align-items:flex-start; }
+  .preview-img{ width:180px; height:180px; object-fit:cover; border-radius:var(--radius-md); border:1px solid var(--line); flex:none; }
+
+  /* ---------- Result page ---------- */
+  .result-top{ display:grid; grid-template-columns:260px 1fr; gap:24px; margin-bottom:24px; }
+  .fundus-frame{
+    border-radius:var(--radius-lg);
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,0.68);
+    background:#111;
+    aspect-ratio:1/1;
+    box-shadow:0 18px 40px -26px rgba(37,26,63,0.45);
+  }
+  .fundus-frame img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .result-meta-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px 24px; margin-top:6px; }
+  .meta-item .k{ font-size:11.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted-2); margin-bottom:4px; }
+  .meta-item .v{ font-size:15px; font-weight:600; }
+  .grade-headline{ font-size:26px; margin-bottom:4px; }
+
+  .prob-row{ display:flex; align-items:center; gap:14px; padding:9px 0; }
+  .prob-label{ width:150px; flex:none; font-size:13px; font-weight:600; }
+  .prob-bar-track{ flex:1; height:9px; border-radius:6px; background:var(--line-soft); overflow:hidden; }
+  .prob-bar-fill{ height:100%; border-radius:6px; }
+  .prob-val{ width:56px; flex:none; text-align:right; font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--muted); }
+
+  .referral-banner{
+    border-radius:var(--radius-md); padding:16px 18px; display:flex; align-items:center; gap:12px;
+    margin-top:22px; font-size:14px; font-weight:500;
+  }
+  .referral-banner.yes{ background:var(--bad-bg); color:#8a2b3a; }
+  .referral-banner.no{ background:var(--ok-bg); color:#1a6558; }
+
+  /* ---------- Loading / error ---------- */
+  .analyzing{ text-align:center; padding:50px 20px; }
+  .spinner{ width:38px; height:38px; margin:0 auto 18px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--accent); animation:spin 0.8s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .analyzing h3{ font-size:17px; margin-bottom:6px; }
+  .analyzing p{ color:var(--muted); font-size:13.5px; }
+
+  .error-banner{
+    background:var(--bad-bg); color:#8a2b3a; border-radius:var(--radius-md);
+    padding:13px 16px; font-size:13.5px; margin-bottom:18px; display:flex; gap:10px; align-items:flex-start;
+  }
+  .error-banner svg{ flex:none; margin-top:1px; }
+
+  .toast-wrap{ position:fixed; bottom:24px; right:24px; z-index:50; display:flex; flex-direction:column; gap:8px; }
+  .toast{
+    background:var(--ink); color:#fff; padding:12px 16px; border-radius:9px; font-size:13px;
+    box-shadow:0 10px 30px -10px rgba(0,0,0,0.4); max-width:320px;
+  }
+  .toast.err{ background:#8a2b3a; }
+
+  .modal-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(34,26,51,0.38);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:60;
+  }
+  .modal{
+    background:rgba(255,255,255,0.72);
+    border:var(--glass-border);
+    box-shadow:0 24px 70px -30px rgba(37,26,63,0.55);
+    backdrop-filter:blur(22px) saturate(130%);
+    -webkit-backdrop-filter:blur(22px) saturate(130%);
+    border-radius:var(--radius-lg);
+    padding:26px;
+    width:380px;
+    max-width:90vw;
+  }
+  .modal h3{ font-size:17px; margin-bottom:14px; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+
+  section.block{ margin-bottom:32px; }
+  section.block h2{ font-size:17px; margin-bottom:14px; }
+
+  /* ---------- New screening dashboard card ---------- */
+  .new-screening-card{
+    background:
+      linear-gradient(135deg,rgba(37,26,63,0.94),rgba(79,53,97,0.86)),
+      rgba(37,26,63,0.88);
+    border-color:rgba(255,255,255,0.18);
+    color:#fff;
+    box-shadow:0 20px 45px -24px rgba(37,26,63,0.60);
+    backdrop-filter:blur(20px) saturate(125%);
+    -webkit-backdrop-filter:blur(20px) saturate(125%);
+    position:relative;
+    overflow:hidden;
+  }
+  .new-screening-card::before{
+    content:"";
+    position:absolute;
+    width:220px;
+    height:220px;
+    border-radius:50%;
+    right:-90px;
+    top:-120px;
+    background:rgba(255,255,255,0.10);
+    filter:blur(2px);
+    pointer-events:none;
+  }
+  .new-screening-card h2{
+    color:#fff;
+  }
+  .new-screening-card p{
+    color:rgba(255,255,255,0.72) !important;
+  }
+  .new-screening-card .btn-ghost{
+    color:#fff;
+    border-color:rgba(255,255,255,0.28);
+    background:transparent;
+  }
+  .new-screening-card .btn-ghost:hover{
+    background:rgba(255,255,255,0.10);
+    border-color:rgba(255,255,255,0.40);
+  }
+
+  @media (max-width: 780px){
+    #sidebar{ display:none; }
+    #main{ padding:24px 18px 60px; max-width:100%; }
+    .result-top{ grid-template-columns:1fr; }
+    .fundus-frame{ max-width:320px; }
+  }
+</style>
+</head>
+<body>
+<div id="shell">
+  <aside id="sidebar">
+    <div class="brand">
+      <img src="./vision-saathi-logo.png" alt="VisionSaathi logo" width="30" height="30" style="object-fit:contain; flex:none;">
+      <div>
+        <div class="brand-name">VisionSaathi</div>
+        <div class="brand-sub">DR SCREENING</div>
+      </div>
+    </div>
+    <nav class="mainnav" id="mainnav">
+      <a href="#/dashboard" data-route="dashboard">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 9l6-6 6 6M4 8v6h8V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Dashboard
+      </a>
+      <a href="#/patients" data-route="patients">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        Patients
+      </a>
+      <a href="#/screenings/new" data-route="screenings-new">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2.4" stroke="currentColor" stroke-width="1.4"/></svg>
+        New screening
+      </a>
+    </nav>
+    <div class="side-divider"></div>
+    <div class="side-footer">
+      <div class="conn-row"><span class="conn-dot off" id="connDot"></span><span id="connLabel">Checking backend&hellip;</span></div>
+      <button class="api-config-btn" id="apiCfgBtn" type="button">Backend: <span id="apiUrlLabel" class="mono"></span></button>
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ State ============ */
+  var API = { base: "http://localhost:8080" };
+  var cache = { patients: null };
+
+  /* ============ Small helpers ============ */
+  function el(tag, attrs, children){
+    var n = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function(k){
+      if(k === "html"){ n.innerHTML = attrs[k]; }
+      else if(k === "text"){ n.textContent = attrs[k]; }
+      else if(k.indexOf("on") === 0 && typeof attrs[k] === "function"){ n.addEventListener(k.slice(2), attrs[k]); }
+      else if(k === "class"){ n.className = attrs[k]; }
+      else { n.setAttribute(k, attrs[k]); }
+    });
+    (children || []).forEach(function(c){ if(c) n.appendChild(c); });
+    return n;
+  }
+  function fmtDate(iso){
+    try{
+      var d = new Date(iso);
+      return d.toLocaleString(undefined, { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
+    }catch(e){ return iso; }
+  }
+  function pct(n){
+    if(n === null || n === undefined || isNaN(Number(n))) return "—";
+    return Math.max(0, Math.min(100, Number(n))).toFixed(2) + "%";
+  }
+
+  var GRADE_LABELS = {
+    LEVEL_0: "No DR", LEVEL_1: "Mild DR", LEVEL_2: "Moderate DR",
+    LEVEL_3: "Severe DR", LEVEL_4: "Proliferative DR"
+  };
+  var GRADE_COLORS = {
+    LEVEL_0: "#278f83", LEVEL_1: "#c9932e", LEVEL_2: "#c85c81",
+    LEVEL_3: "#b6334a", LEVEL_4: "#6e1f31"
+  };
+  var PROB_KEY_TO_GRADE = {
+    "No DR": "LEVEL_0", "Mild DR": "LEVEL_1", "Moderate DR": "LEVEL_2",
+    "Severe DR": "LEVEL_3", "Proliferative DR": "LEVEL_4"
+  };
+  var STATUS_LABELS = {
+    UPLOADED: "Image uploaded", GRADING: "Analyzing image",
+    COMPLETED: "Screening completed", FAILED: "Screening failed"
+  };
+
+  function toast(msg, isErr){
+    var wrap = document.getElementById("toastWrap");
+    var t = el("div", { class: "toast" + (isErr ? " err" : ""), text: msg });
+    wrap.appendChild(t);
+    setTimeout(function(){ t.style.opacity = "0"; t.style.transition="opacity 0.3s"; setTimeout(function(){ wrap.removeChild(t); }, 300); }, 3800);
+  }
+
+  function friendlyError(status, bodyText){
+    var msg = null;
+    try{ var j = JSON.parse(bodyText); msg = j.message || j.error || null; }catch(e){}
+    if(msg) return msg;
+    if(status === 404) return "The requested record could not be found.";
+    if(status === 400) return "The image or form data was invalid. Check the file and try again.";
+    if(status === 413) return "That image file is too large.";
+    if(status === 502 || status === 503 || status === 504) return "The ML service is unavailable right now. Please try again shortly.";
+    if(status === 500) return "ML inference failed while analyzing the image.";
+    if(status === 0) return "Could not reach the backend at " + API.base + ". Confirm it is running and CORS is configured.";
+    return "Something went wrong (status " + status + ").";
+  }
+
+  /* ============ API layer (Spring Boot only, per contract) ============ */
+  var Api = {
+    createPatient: function(patient){
+      return fetch(API.base + "/api/patients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patient)
+      }).then(handle);
+    },
+    getPatients: function(){
+      return fetch(API.base + "/api/patients").then(handle);
+    },
+    getPatient: function(id){
+      return fetch(API.base + "/api/patients/" + id).then(handle);
+    },
+    getPatientScreenings: function(id){
+      return fetch(API.base + "/api/patients/" + id + "/screenings").then(handle);
+    },
+    uploadScreening: function(patientId, file){
+      var fd = new FormData();
+      fd.append("patientId", patientId);
+      fd.append("image", file);
+      return fetch(API.base + "/api/screenings/upload", { method: "POST", body: fd }).then(handle);
+    },
+    getScreening: function(id){
+      return fetch(API.base + "/api/screenings/" + id).then(handle);
+    },
+    screeningImageUrl: function(id){
+      return API.base + "/api/screenings/" + id + "/image";
+    },
+    screeningHeatmapUrl: function(id) {
+    return API.base + "/api/screenings/" + id + "/heatmap";
+},
+    health: function(){
+      return fetch(API.base + "/api/patients").then(function(r){ return r.ok || r.status === 404; }).catch(function(){ return false; });
+    }
+  };
+  function handle(res){
+    if(!res.ok){
+      return res.text().then(function(txt){
+        var err = new Error(friendlyError(res.status, txt));
+        err.status = res.status;
+        throw err;
+      });
+    }
+    if(res.status === 204) return null;
+    return res.json();
+  }
+
+  /* ============ Router ============ */
+  var routes = [];
+  function route(pattern, handler){ routes.push({ pattern: pattern, handler: handler }); }
+  function matchRoute(hash){
+    var path = hash.replace(/^#/, "") || "/dashboard";
+    var qIndex = path.indexOf("?");
+    var query = {};
+    if(qIndex >= 0){
+      var qs = path.slice(qIndex + 1);
+      path = path.slice(0, qIndex);
+      qs.split("&").forEach(function(pair){
+        if(!pair) return;
+        var kv = pair.split("=");
+        query[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || "");
+      });
+    }
+    for(var i = 0; i < routes.length; i++){
+      var parts = routes[i].pattern.split("/").filter(Boolean);
+      var pathParts = path.split("/").filter(Boolean);
+      if(parts.length !== pathParts.length) continue;
+      var params = {};
+      var ok = true;
+      for(var j = 0; j < parts.length; j++){
+        if(parts[j].indexOf(":") === 0){ params[parts[j].slice(1)] = pathParts[j]; }
+        else if(parts[j] !== pathParts[j]){ ok = false; break; }
+      }
+      if(ok) return { handler: routes[i].handler, params: params, query: query };
+    }
+    return null;
+  }
+  function render(){
+    var main = document.getElementById("main");
+    main.innerHTML = "";
+    var m = matchRoute(location.hash);
+    updateNavActive();
+    if(!m){ main.appendChild(notFoundView()); return; }
+    m.handler(main, m.params, m.query);
+  }
+  function updateNavActive(){
+    var hash = location.hash.replace(/^#\//, "");
+    var links = document.querySelectorAll("#mainnav a");
+    links.forEach(function(a){ a.classList.remove("active"); });
+    var map = { "dashboard": "dashboard", "patients": "patients", "screenings/new": "screenings-new" };
+    Object.keys(map).forEach(function(k){
+      if(hash === k || (k === "patients" && hash.indexOf("patients") === 0)){
+        var link = document.querySelector('#mainnav a[data-route="' + map[k] + '"]');
+        if(link) link.classList.add("active");
+      }
+    });
+  }
+  window.addEventListener("hashchange", render);
+  window.addEventListener("load", function(){
+    checkHealth();
+    render();
+  });
+
+  function checkHealth(){
+    Api.health().then(function(ok){
+      document.getElementById("connDot").classList.toggle("off", !ok);
+      document.getElementById("connLabel").textContent = ok ? "Backend connected" : "Backend unreachable";
+    });
+  }
+
+  /* ============ Shared UI bits ============ */
+  function pageHead(title, desc, actions){
+    var head = el("div", { class: "page-head" });
+    var row = el("div", { style: "display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap;" });
+    var left = el("div");
+    left.appendChild(el("h1", { text: title }));
+    if(desc) left.appendChild(el("p", { text: desc }));
+    row.appendChild(left);
+    if(actions) row.appendChild(actions);
+    head.appendChild(row);
+    return head;
+  }
+  function crumb(items){
+    var c = el("div", { class: "crumb" });
+    items.forEach(function(it, i){
+      if(it.href){ var a = el("a", { href: it.href, text: it.label }); c.appendChild(a); }
+      else{ c.appendChild(el("span", { text: it.label })); }
+      if(i < items.length - 1) c.appendChild(document.createTextNode("  /  "));
+    });
+    return c;
+  }
+  function errorBanner(msg){
+    return el("div", { class: "error-banner" }, [
+      el("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", html: '<circle cx="8" cy="8" r="7" stroke="#8a2b3a" stroke-width="1.4"/><path d="M8 5v4" stroke="#8a2b3a" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11" r="0.8" fill="#8a2b3a"/>' }),
+      el("div", { text: msg })
+    ]);
+  }
+  function statusBadge(status){
+    var cls = "status-" + (status || "").toLowerCase();
+    return el("span", { class: "badge " + cls }, [
+      el("span", { class: "badge-dot", style: "background:currentColor" }),
+      document.createTextNode(STATUS_LABELS[status] || status)
+    ]);
+  }
+  function referableBadge(referable){
+    return el("span", { class: "badge " + (referable ? "ref-yes" : "ref-no"), text: referable ? "Referral recommended" : "No referral needed" });
+  }
+  function gradeChip(grade){
+    var color = GRADE_COLORS[grade] || "#999";
+    return el("span", { class: "grade-chip" }, [
+      el("span", { class: "sw", style: "background:" + color }),
+      document.createTextNode(GRADE_LABELS[grade] || grade || "\u2014")
+    ]);
+  }
+
+  /* ============ Views ============ */
+
+  function notFoundView(){
+    var wrap = el("div");
+    wrap.appendChild(pageHead("Page not found", "That route doesn't exist in this app."));
+    var card = el("div", { class: "card card-pad" }, [
+      el("div", { class: "empty" }, [
+        el("div", { text: "Nothing here." }),
+        (function(){ var b = el("a", { href: "#/dashboard", class: "btn btn-primary", text: "Back to dashboard" }); return b; })()
+      ])
+    ]);
+    wrap.appendChild(card);
+    return wrap;
+  }
+
+  route("dashboard", function(main){
+    main.appendChild(pageHead("Dashboard", "An overview of registered patients and recent screening activity."));
+
+    var statRow = el("div", { class: "stat-row" });
+    var statPatients = el("div", { class: "stat" }, [ el("div", { class: "num", text: "\u2013" }), el("div", { class: "lbl", text: "Registered patients" }) ]);
+    var statReferable = el("div", { class: "stat" }, [ el("div", { class: "num", text: "\u2013" }), el("div", { class: "lbl", text: "Referable screenings" }) ]);
+    var statLatest = el("div", { class: "stat" }, [ el("div", { class: "num", text: "\u2013" }), el("div", { class: "lbl", text: "Total screenings" }) ]);
+    statRow.appendChild(statPatients); statRow.appendChild(statReferable); statRow.appendChild(statLatest);
+    main.appendChild(statRow);
+
+    var actions = el("div", { class: "card card-pad new-screening-card", style: "margin-bottom:24px;" }, [
+      el("h2", { text: "Start a new screening", style: "font-size:16px; margin-bottom:8px;" }),
+      el("p", { text: "Select a registered patient and upload a retinal fundus image to run grading.", style: "color:var(--muted); font-size:13.5px; margin-bottom:16px;" }),
+      el("div", { style: "display:flex; gap:10px;" }, [
+        el("a", { href: "#/screenings/new", class: "btn btn-primary", text: "New screening" }),
+        el("a", { href: "#/patients/new", class: "btn btn-ghost", text: "Register patient" })
+      ])
+    ]);
+    main.appendChild(actions);
+
+    var recentSection = el("section", { class: "block" }, [ el("h2", { text: "Recently registered patients" }) ]);
+    var listHolder = el("div", { class: "card" });
+    recentSection.appendChild(listHolder);
+    main.appendChild(recentSection);
+
+    listHolder.appendChild(loadingRow());
+    Api.getPatients().then(function(patients){
+      statPatients.querySelector(".num").textContent = patients.length;
+      listHolder.innerHTML = "";
+      if(patients.length === 0){
+        listHolder.appendChild(el("div", { class: "card-pad" }, [
+          el("div", { class: "empty" }, [
+            el("div", { text: "No patients registered yet." }),
+            el("a", { href: "#/patients/new", class: "btn btn-primary", text: "Register your first patient" })
+          ])
+        ]));
+        statReferable.querySelector(".num").textContent = "0";
+        statLatest.querySelector(".num").textContent = "0";
+        return;
+      }
+      var recent = patients.slice().reverse().slice(0, 6);
+      listHolder.appendChild(patientTable(recent));
+
+      // Aggregate stats from each patient's screening history (bounded fetches)
+      var totalScreenings = 0, referableCount = 0, done = 0;
+      patients.forEach(function(p){
+        Api.getPatientScreenings(p.id).then(function(screenings){
+          totalScreenings += screenings.length;
+          referableCount += screenings.filter(function(s){ return s.referable; }).length;
+        }).catch(function(){}).then(function(){
+          done++;
+          if(done === patients.length){
+            statLatest.querySelector(".num").textContent = totalScreenings;
+            statReferable.querySelector(".num").textContent = referableCount;
+          }
+        });
+      });
+    }).catch(function(err){
+      listHolder.innerHTML = "";
+      listHolder.appendChild(el("div", { class: "card-pad" }, [ errorBanner(err.message) ]));
+    });
+  });
+
+  function loadingRow(){
+    return el("div", { class: "analyzing" }, [
+      el("div", { class: "spinner" }),
+      el("p", { text: "Loading\u2026" })
+    ]);
+  }
+
+  function patientTable(patients){
+    var table = el("table", { class: "data" });
+    var thead = el("thead", {}, [ el("tr", {}, [
+      el("th", { text: "Patient" }), el("th", { text: "Age" }), el("th", { text: "Gender" }), el("th", { text: "Diabetic" })
+    ]) ]);
+    table.appendChild(thead);
+    var tbody = el("tbody");
+    patients.forEach(function(p){
+      var tr = el("tr", { onclick: function(){ location.hash = "#/patients/" + p.id; } }, [
+        el("td", {}, [ el("span", { class: "code-pill", text: p.patientCode }) ]),
+        el("td", { text: p.age != null ? p.age : "\u2014" }),
+        el("td", { text: p.gender || "\u2014" }),
+        el("td", { text: p.diabetic ? "Yes" : "No" })
+      ]);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    return el("div", { class: "card-pad" }, [ table ]);
+  }
+
+  route("patients", function(main){
+    var actions = el("a", { href: "#/patients/new", class: "btn btn-primary", text: "+ Register patient" });
+    main.appendChild(pageHead("Patients", "All patients registered in the screening system.", actions));
+
+    var searchWrap = el("div", { class: "list-toolbar" }, [
+      el("input", { type: "text", placeholder: "Search by patient code\u2026", class: "search-input", id: "patientSearch" })
+    ]);
+    main.appendChild(searchWrap);
+
+    var holder = el("div", { class: "card" });
+    holder.appendChild(loadingRow());
+    main.appendChild(holder);
+
+    var allPatients = [];
+    function draw(list){
+      holder.innerHTML = "";
+      if(list.length === 0){
+        holder.appendChild(el("div", { class: "card-pad" }, [
+          el("div", { class: "empty" }, [
+            el("div", { text: "No matching patients." })
+          ])
+        ]));
+        return;
+      }
+      holder.appendChild(patientTable(list));
+    }
+
+    Api.getPatients().then(function(patients){
+      allPatients = patients;
+      draw(patients);
+      document.getElementById("patientSearch").addEventListener("input", function(e){
+        var q = e.target.value.trim().toLowerCase();
+        draw(allPatients.filter(function(p){ return p.patientCode.toLowerCase().indexOf(q) >= 0; }));
+      });
+    }).catch(function(err){
+      holder.innerHTML = "";
+      holder.appendChild(el("div", { class: "card-pad" }, [ errorBanner(err.message) ]));
+    });
+  });
+
+  route("patients/new", function(main){
+    main.appendChild(crumb([ { href: "#/patients", label: "Patients" }, { label: "New" } ]));
+    main.appendChild(pageHead("Register patient", "Add a patient record before uploading a screening image."));
+
+    var errHolder = el("div");
+    main.appendChild(errHolder);
+
+    var form = el("form", { class: "card card-pad", style: "max-width:480px;" });
+    var codeField = el("div", { class: "field" }, [
+      el("label", { class: "field-label", text: "Patient code" }),
+      el("input", { type: "text", id: "f_code", placeholder: "e.g. P001", required: "required" })
+    ]);
+    var ageGenderRow = el("div", { class: "field-row" }, [
+      el("div", { class: "field" }, [
+        el("label", { class: "field-label", text: "Age" }),
+        el("input", { type: "number", id: "f_age", min: "0", max: "130", placeholder: "52", required: "required" })
+      ]),
+      el("div", { class: "field" }, [
+        el("label", { class: "field-label", text: "Gender" }),
+        el("select", { id: "f_gender" }, [
+          el("option", { value: "MALE", text: "Male" }),
+          el("option", { value: "FEMALE", text: "Female" }),
+          el("option", { value: "OTHER", text: "Other" })
+        ])
+      ])
+    ]);
+    var diabeticRow = el("div", { class: "checkbox-row" }, [
+      el("input", { type: "checkbox", id: "f_diabetic" }),
+      el("label", { text: "Patient has diabetes" })
+    ]);
+    var submitBtn = el("button", { type: "submit", class: "btn btn-primary", text: "Register patient" });
+
+    form.appendChild(codeField);
+    form.appendChild(ageGenderRow);
+    form.appendChild(diabeticRow);
+    form.appendChild(submitBtn);
+
+    form.addEventListener("submit", function(e){
+      e.preventDefault();
+      errHolder.innerHTML = "";
+      var patientCode = document.getElementById("f_code").value.trim();
+      var age = parseInt(document.getElementById("f_age").value, 10);
+      var gender = document.getElementById("f_gender").value;
+      var diabetic = document.getElementById("f_diabetic").checked;
+      if(!patientCode || isNaN(age)){
+        errHolder.appendChild(errorBanner("Enter a patient code and a valid age."));
+        return;
+      }
+      submitBtn.disabled = true; submitBtn.textContent = "Registering\u2026";
+      Api.createPatient({ patientCode: patientCode, age: age, gender: gender, diabetic: diabetic }).then(function(patient){
+        toast("Patient " + patient.patientCode + " registered.");
+        location.hash = "#/patients/" + patient.id;
+      }).catch(function(err){
+        submitBtn.disabled = false; submitBtn.textContent = "Register patient";
+        errHolder.innerHTML = "";
+        errHolder.appendChild(errorBanner(err.message));
+      });
+    });
+
+    main.appendChild(form);
+  });
+
+  route("patients/:id", function(main, params){
+    var id = params.id;
+    main.appendChild(crumb([ { href: "#/patients", label: "Patients" }, { label: "Patient #" + id } ]));
+    var head = el("div", { id: "patHead" });
+    main.appendChild(head);
+    head.appendChild(loadingRow());
+
+    var body = el("div", { id: "patBody" });
+    main.appendChild(body);
+
+    Api.getPatient(id).then(function(patient){
+      head.innerHTML = "";
+      var actions = el("a", { href: "#/screenings/new?patientId=" + patient.id, class: "btn btn-primary", text: "New screening" });
+      head.appendChild(pageHead("Patient " + patient.patientCode, null, actions));
+
+      var infoCard = el("div", { class: "card card-pad", style: "margin-bottom:28px;" });
+      var grid = el("div", { class: "result-meta-grid" }, [
+        metaItem("Patient code", patient.patientCode),
+        metaItem("Age", patient.age),
+        metaItem("Gender", patient.gender),
+        metaItem("Diabetic", patient.diabetic ? "Yes" : "No")
+      ]);
+      infoCard.appendChild(grid);
+      head.appendChild(infoCard);
+
+      body.appendChild(el("section", { class: "block" }, [ el("h2", { text: "Screening history" }) ]));
+      var histHolder = el("div", { class: "card" });
+      histHolder.appendChild(loadingRow());
+      body.appendChild(histHolder);
+
+      Api.getPatientScreenings(patient.id).then(function(screenings){
+        histHolder.innerHTML = "";
+        if(screenings.length === 0){
+          histHolder.appendChild(el("div", { class: "card-pad" }, [
+            el("div", { class: "empty" }, [
+              el("div", { text: "No screenings recorded for this patient yet." }),
+              el("a", { href: "#/screenings/new?patientId=" + patient.id, class: "btn btn-primary", text: "Run first screening" })
+            ])
+          ]));
+          return;
+        }
+        histHolder.appendChild(screeningTable(screenings));
+      }).catch(function(err){
+        histHolder.innerHTML = "";
+        histHolder.appendChild(el("div", { class: "card-pad" }, [ errorBanner(err.message) ]));
+      });
+    }).catch(function(err){
+      head.innerHTML = "";
+      head.appendChild(errorBanner(err.message));
+    });
+  });
+
+  function metaItem(k, v){
+    return el("div", { class: "meta-item" }, [
+      el("div", { class: "k", text: k }),
+      el("div", { class: "v", text: (v === null || v === undefined || v === "") ? "\u2014" : String(v) })
+    ]);
+  }
+
+  function screeningTable(screenings){
+    var table = el("table", { class: "data" });
+    table.appendChild(el("thead", {}, [ el("tr", {}, [
+      el("th", { text: "Date" }), el("th", { text: "Grade" }), el("th", { text: "Confidence" }),
+      el("th", { text: "Referable" }), el("th", { text: "Status" }), el("th", { text: "" })
+    ]) ]));
+    var tbody = el("tbody");
+    screenings.forEach(function(s){
+      var tr = el("tr", { onclick: function(){ location.hash = "#/screenings/" + s.id; } }, [
+        el("td", { text: fmtDate(s.createdAt) }),
+        el("td", {}, [ gradeChip(s.drGrade) ]),
+        el("td", { class: "mono", text: s.confidence != null ? pct(s.confidence) : "\u2014" }),
+        el("td", {}, [ referableBadge(!!s.referable) ]),
+        el("td", {}, [ statusBadge(s.status) ]),
+        el("td", {}, [ el("a", { href: "#/screenings/" + s.id, class: "btn btn-ghost btn-sm", text: "View" }) ])
+      ]);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    return el("div", { class: "card-pad" }, [ table ]);
+  }
+
+  route("screenings/new", function(main, params, query){
+    main.appendChild(crumb([ { href: "#/patients", label: "Patients" }, { label: "New screening" } ]));
+    main.appendChild(pageHead("New DR screening", "Choose a patient and upload a retinal fundus image (JPG or PNG) to run grading."));
+
+    var errHolder = el("div");
+    main.appendChild(errHolder);
+
+    var card = el("div", { class: "card card-pad", style: "max-width:560px;" });
+
+    var patientField = el("div", { class: "field" }, [
+      el("label", { class: "field-label", text: "Patient" }),
+      el("select", { id: "s_patient" }, [ el("option", { value: "", text: "Loading patients\u2026" }) ])
+    ]);
+    card.appendChild(patientField);
+
+    var dz = el("div", { class: "dropzone", id: "dropzone" }, [
+      el("svg", { width: "28", height: "28", viewBox: "0 0 28 28", fill: "none", html: '<circle cx="14" cy="14" r="12" stroke="#cf5a2d" stroke-width="1.4"/><path d="M14 9v10M9.5 13.5 14 9l4.5 4.5" stroke="#cf5a2d" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>' }),
+      el("div", { text: "Click to upload, or drag a retinal image here" }),
+      el("div", { class: "hint", text: "JPG, JPEG or PNG" }),
+      el("input", { type: "file", id: "s_file", accept: ".jpg,.jpeg,.png,image/jpeg,image/png", style: "display:none;" })
+    ]);
+    card.appendChild(dz);
+
+    var previewHolder = el("div", { style: "margin-top:18px;" });
+    card.appendChild(previewHolder);
+
+    var submitBtn = el("button", { type: "button", class: "btn btn-primary", text: "Start screening", style: "margin-top:20px;", disabled: "disabled" });
+    card.appendChild(submitBtn);
+
+    main.appendChild(card);
+
+    var progressHolder = el("div");
+    main.appendChild(progressHolder);
+
+    var selectedFile = null;
+
+    function refreshSubmit(){
+      var pid = document.getElementById("s_patient").value;
+      submitBtn.disabled = !(pid && selectedFile);
+    }
+
+    Api.getPatients().then(function(patients){
+      var sel = document.getElementById("s_patient");
+      sel.innerHTML = "";
+      if(patients.length === 0){
+        sel.appendChild(el("option", { value: "", text: "No patients available" }));
+        errHolder.appendChild(errorBanner("No patients registered yet. "));
+        var link = el("a", { href: "#/patients/new", class: "btn btn-primary btn-sm", text: "Register a patient" });
+        errHolder.appendChild(link);
+        return;
+      }
+      sel.appendChild(el("option", { value: "", text: "Select a patient\u2026" }));
+      patients.forEach(function(p){
+        sel.appendChild(el("option", { value: p.id, text: p.patientCode + " \u2014 age " + p.age }));
+      });
+      if(query.patientId){
+        sel.value = query.patientId;
+      }
+      sel.addEventListener("change", refreshSubmit);
+    }).catch(function(err){
+      errHolder.appendChild(errorBanner(err.message));
+    });
+
+    dz.addEventListener("click", function(){ document.getElementById("s_file").click(); });
+    ["dragover","dragenter"].forEach(function(evt){
+      dz.addEventListener(evt, function(e){ e.preventDefault(); dz.classList.add("drag"); });
+    });
+    ["dragleave","drop"].forEach(function(evt){
+      dz.addEventListener(evt, function(e){ e.preventDefault(); dz.classList.remove("drag"); });
+    });
+    dz.addEventListener("drop", function(e){
+      var f = e.dataTransfer.files[0];
+      if(f) handleFile(f);
+    });
+    document.getElementById("s_file").addEventListener("change", function(e){
+      var f = e.target.files[0];
+      if(f) handleFile(f);
+    });
+
+    function handleFile(f){
+      var okType = /image\/(jpeg|png)/.test(f.type) || /\.(jpe?g|png)$/i.test(f.name);
+      if(!okType){
+        errHolder.innerHTML = "";
+        errHolder.appendChild(errorBanner("Please choose a JPG, JPEG or PNG image."));
+        return;
+      }
+      errHolder.innerHTML = "";
+      selectedFile = f;
+      previewHolder.innerHTML = "";
+      var url = URL.createObjectURL(f);
+      previewHolder.appendChild(el("div", { class: "preview-wrap" }, [
+        el("img", { src: url, class: "preview-img", alt: "Selected retinal image" }),
+        el("div", {}, [
+          el("div", { style: "font-weight:600; font-size:14px; margin-bottom:4px;", text: f.name }),
+          el("div", { style: "color:var(--muted); font-size:12.5px;", text: (f.size / 1024).toFixed(0) + " KB" }),
+          el("button", { type: "button", class: "btn btn-ghost btn-sm", style: "margin-top:10px;", text: "Choose a different image", onclick: function(){ selectedFile = null; previewHolder.innerHTML = ""; refreshSubmit(); } })
+        ])
+      ]));
+      refreshSubmit();
+    }
+
+    submitBtn.addEventListener("click", function(){
+      var pid = document.getElementById("s_patient").value;
+      if(!pid || !selectedFile) return;
+      errHolder.innerHTML = "";
+      submitBtn.disabled = true;
+      card.style.opacity = "0.5"; card.style.pointerEvents = "none";
+      progressHolder.innerHTML = "";
+      progressHolder.appendChild(el("div", { class: "card", style: "margin-top:20px;" }, [
+        el("div", { class: "analyzing" }, [
+          el("div", { class: "spinner" }),
+          el("h3", { text: "Analyzing retinal image\u2026" }),
+          el("p", { text: "Please wait while the model grades this fundus image." })
+        ])
+      ]));
+      Api.uploadScreening(pid, selectedFile).then(function(result){
+        toast("Screening completed: " + (GRADE_LABELS[result.drGrade] || result.drGrade));
+        location.hash = "#/screenings/" + result.id;
+      }).catch(function(err){
+        progressHolder.innerHTML = "";
+        card.style.opacity = "1"; card.style.pointerEvents = "auto";
+        submitBtn.disabled = false;
+        errHolder.appendChild(errorBanner(err.message));
+      });
+    });
+  });
+
+  route("screenings/:id", function(main, params){
+    var id = params.id;
+    var holder = el("div");
+    main.appendChild(holder);
+    holder.appendChild(loadingRow());
+
+    Api.getScreening(id).then(function(s){
+      holder.innerHTML = "";
+      holder.appendChild(crumb([
+        { href: "#/patients/" + s.patientId, label: s.patientCode || ("Patient #" + s.patientId) },
+        { label: "Screening #" + s.id }
+      ]));
+
+      var headActions = el("a", { href: "#/patients/" + s.patientId, class: "btn btn-ghost", text: "View patient" });
+      holder.appendChild(pageHead("Screening result", null, headActions));
+
+      if(s.status === "GRADING" || s.status === "UPLOADED"){
+        holder.appendChild(el("div", { class: "card" }, [
+          el("div", { class: "analyzing" }, [
+            el("div", { class: "spinner" }),
+            el("h3", { text: STATUS_LABELS[s.status] }),
+            el("p", { text: "This screening is still processing. Refresh to check again." })
+          ])
+        ]));
+        var refreshBtn = el("button", { type: "button", class: "btn btn-primary", style: "margin-top:16px;", text: "Refresh status", onclick: function(){ location.hash = "#/screenings/" + s.id; render(); } });
+        holder.appendChild(refreshBtn);
+        return;
+      }
+      if(s.status === "FAILED"){
+        holder.appendChild(errorBanner("This screening failed to complete. Try uploading the image again."));
+        return;
+      }
+
+      var top = el("div", { class: "result-top" });
+      var heatmapSrc = s.heatmapUrl
+    ? API.base + s.heatmapUrl
+    : Api.screeningHeatmapUrl(s.id);
+
+var frame = el("div", { class: "fundus-frame" }, [
+    el("img", {
+        src: heatmapSrc,
+        alt: "AI Grad-CAM retinal attention overlay"
+    })
+]);
+      top.appendChild(frame);
+
+      var infoCard = el("div", { class: "card card-pad" });
+      infoCard.appendChild(el("div", { class: "grade-headline serif" }, [ gradeChip(s.drGrade) ]));
+      infoCard.appendChild(el("div", { style: "margin-bottom:14px;" }, [ statusBadge(s.status) ]));
+      var grid = el("div", { class: "result-meta-grid" }, [
+        metaItem("Patient", s.patientCode),
+        metaItem("Screening date", fmtDate(s.createdAt)),
+        metaItem("Confidence", s.confidence != null ? pct(s.confidence) : "\u2014"),
+        metaItem("Status", STATUS_LABELS[s.status] || s.status)
+      ]);
+      infoCard.appendChild(grid);
+      top.appendChild(infoCard);
+      holder.appendChild(top);
+
+      holder.appendChild(el("div", { class: "referral-banner " + (s.referable ? "yes" : "no") }, [
+        el("span", { text: s.referable ? "Referral recommended \u2014 this result meets the referable DR threshold." : "No referral needed \u2014 this result is below the referable DR threshold." })
+      ]));
+
+      var probSection = el("section", { class: "block", style: "margin-top:32px;" }, [ el("h2", { text: "Probability distribution" }) ]);
+      var probCard = el("div", { class: "card card-pad" });
+      var order = ["No DR", "Mild DR", "Moderate DR", "Severe DR", "Proliferative DR"];
+      var probs = s.probabilities || {};
+      order.forEach(function(k){
+        var v = probs[k] != null ? probs[k] : 0;
+        var grade = PROB_KEY_TO_GRADE[k];
+        var color = GRADE_COLORS[grade];
+        var row = el("div", { class: "prob-row" }, [
+          el("div", { class: "prob-label", text: k }),
+          el("div", { class: "prob-bar-track" }, [
+            el("div", { class: "prob-bar-fill", style: "width:" + Math.min(100, v) + "%; background:" + color })
+          ]),
+          el("div", { class: "prob-val mono", text: pct(v) })
+        ]);
+        probCard.appendChild(row);
+      });
+      probSection.appendChild(probCard);
+      holder.appendChild(probSection);
+    }).catch(function(err){
+      holder.innerHTML = "";
+      holder.appendChild(errorBanner(err.message));
+    });
+  });
+
+  /* ============ API config modal ============ */
+  function openApiModal(){
+    var backdrop = el("div", { class: "modal-backdrop" });
+    var input = el("input", { type: "text", value: API.base, id: "apiInput" });
+    var modal = el("div", { class: "modal" }, [
+      el("h3", { text: "Backend URL" }),
+      el("p", { style: "font-size:12.5px; color:var(--muted); margin-bottom:12px;", text: "The frontend talks to Spring Boot only \u2014 not the ML service directly." }),
+      input,
+      el("div", { class: "modal-actions" }, [
+        el("button", { type: "button", class: "btn btn-ghost", text: "Cancel", onclick: function(){ document.body.removeChild(backdrop); } }),
+        el("button", { type: "button", class: "btn btn-primary", text: "Save", onclick: function(){
+          API.base = input.value.trim().replace(/\/$/, "");
+          document.getElementById("apiUrlLabel").textContent = API.base;
+          document.body.removeChild(backdrop);
+          checkHealth();
+          render();
+        } })
+      ])
+    ]);
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    input.focus();
+  }
+  document.getElementById("apiCfgBtn").addEventListener("click", openApiModal);
+  document.getElementById("apiUrlLabel").textContent = API.base;
+
+})();
+</script>
+</body>
 </html>

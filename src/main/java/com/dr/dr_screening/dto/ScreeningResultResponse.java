@@ -23,8 +23,14 @@ public class ScreeningResultResponse {
 
     private String imageUrl;
 
+    private String heatmapUrl;
+
     private LocalDateTime createdAt;
 
+
+    // ============================================================
+    // ID
+    // ============================================================
 
     public Long getId() {
         return id;
@@ -35,6 +41,10 @@ public class ScreeningResultResponse {
     }
 
 
+    // ============================================================
+    // PATIENT ID
+    // ============================================================
+
     public Long getPatientId() {
         return patientId;
     }
@@ -43,6 +53,10 @@ public class ScreeningResultResponse {
         this.patientId = patientId;
     }
 
+
+    // ============================================================
+    // PATIENT CODE
+    // ============================================================
 
     public String getPatientCode() {
         return patientCode;
@@ -53,6 +67,10 @@ public class ScreeningResultResponse {
     }
 
 
+    // ============================================================
+    // STATUS
+    // ============================================================
+
     public String getStatus() {
         return status;
     }
@@ -61,6 +79,10 @@ public class ScreeningResultResponse {
         this.status = status;
     }
 
+
+    // ============================================================
+    // DR GRADE
+    // ============================================================
 
     public String getDrGrade() {
         return drGrade;
@@ -71,6 +93,10 @@ public class ScreeningResultResponse {
     }
 
 
+    // ============================================================
+    // CONFIDENCE
+    // ============================================================
+
     public Double getConfidence() {
         return confidence;
     }
@@ -80,6 +106,10 @@ public class ScreeningResultResponse {
     }
 
 
+    // ============================================================
+    // REFERABLE
+    // ============================================================
+
     public Boolean getReferable() {
         return referable;
     }
@@ -88,6 +118,10 @@ public class ScreeningResultResponse {
         this.referable = referable;
     }
 
+
+    // ============================================================
+    // PROBABILITIES
+    // ============================================================
 
     public Map<String, Double> getProbabilities() {
         return probabilities;
@@ -100,6 +134,10 @@ public class ScreeningResultResponse {
     }
 
 
+    // ============================================================
+    // ORIGINAL IMAGE URL
+    // ============================================================
+
     public String getImageUrl() {
         return imageUrl;
     }
@@ -108,6 +146,23 @@ public class ScreeningResultResponse {
         this.imageUrl = imageUrl;
     }
 
+
+    // ============================================================
+    // HEATMAP URL
+    // ============================================================
+
+    public String getHeatmapUrl() {
+        return heatmapUrl;
+    }
+
+    public void setHeatmapUrl(String heatmapUrl) {
+        this.heatmapUrl = heatmapUrl;
+    }
+
+
+    // ============================================================
+    // CREATED AT
+    // ============================================================
 
     public LocalDateTime getCreatedAt() {
         return createdAt;

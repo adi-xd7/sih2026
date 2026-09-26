@@ -1,9 +1,10 @@
 package com.dr.dr_screening.client;
 
 import com.dr.dr_screening.dto.MlPredictionResponse;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.http.*;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -16,7 +17,9 @@ public class MlServiceClient {
 
     private final RestClient restClient;
 
-    public MlServiceClient(@Value("${ml.service.url}") String mlServiceUrl) {
+    public MlServiceClient(
+            @Value("${ml.service.url}") String mlServiceUrl) {
+
         this.restClient = RestClient.builder()
                 .baseUrl(mlServiceUrl)
                 .build();
@@ -27,9 +30,21 @@ public class MlServiceClient {
         FileSystemResource imageResource =
                 new FileSystemResource(imagePath);
 
-        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        MultiValueMap<String, Object> body =
+                new LinkedMultiValueMap<>();
+
         body.add("file", imageResource);
 
+        /*
+         * FastAPI /predict now returns:
+         * - DR classification
+         * - confidence
+         * - probabilities
+         * - heatmap_image
+         *
+         * heatmap_image is a PNG data URL containing the
+         * original fundus image with the Grad-CAM overlay.
+         */
         return restClient.post()
                 .uri("/predict")
                 .contentType(MediaType.MULTIPART_FORM_DATA)

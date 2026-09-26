@@ -1,26 +1,22 @@
-import io
+import base64
+import os
+from datetime import datetime
+
 import cv2
+import gdown
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from torchvision import models
 
 
-app = FastAPI(
-    title="DR Severity Grading API",
-    description="Explainable AI for Diabetic Retinopathy Screening",
-)
-
-
-# ---------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------
-
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-MODEL_PATH = "dr_grading_model.pt"
+# ============================================================
+# 1. SETUP & CONFIGURATION
+# ============================================================
 
 IMG_SIZE = 300
 
@@ -32,16 +28,522 @@ DR_CLASS_NAMES = [
     "Proliferative DR",
 ]
 
+MODEL_WEIGHTS_PATH = "dr_grading_model.pt"
 
-# ---------------------------------------------------------
-# Model architecture
-# ---------------------------------------------------------
+# Google Drive fallback
+GDRIVE_FILE_ID = "1shcXxeOnEuMUgQa_YF1FwNgX9XH_ZBwm"
 
-def build_model(n_classes=5):
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-    model = models.efficientnet_b3(weights=None)
+print(f"Running inference on device: {DEVICE}")
 
-    in_features = model.classifier[1].in_features
+
+# ============================================================
+# 2. MODEL DOWNLOAD
+# ============================================================
+
+def download_model_from_gdrive(file_id, output_path):
+    """
+    Download model weights from Google Drive only if the
+    model is not already available locally.
+    """
+
+    if not os.path.exists(output_path):
+
+        print(
+            f"Model weights not found locally. "
+            f"Downloading from Google Drive (ID: {file_id})..."
+        )
+
+        url = f"https://drive.google.com/uc?id={file_id}"
+
+        gdown.download(
+            url,
+            output_path,
+            quiet=False
+        )
+
+        print("Download complete.")
+
+    else:
+
+        print(
+            f"Found local model weights at '{output_path}'."
+        )
+
+
+# ============================================================
+# 3. FASTAPI APPLICATION
+# ============================================================
+
+app = FastAPI(
+    title="Explainable AI for Diabetic Retinopathy Screening API",
+    version="1.0"
+)
+
+
+# ============================================================
+# 4. CORS
+# ============================================================
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ============================================================
+# 5. IMAGE QUALITY ASSESSMENT
+# ============================================================
+
+def get_field_of_view_mask(img):
+    """
+    Detect the illuminated fundus field of view.
+    """
+
+    gray = cv2.cvtColor(
+        img,
+        cv2.COLOR_BGR2GRAY
+    )
+
+    _, mask = cv2.threshold(
+        gray,
+        10,
+        255,
+        cv2.THRESH_BINARY
+    )
+
+    kernel = np.ones(
+        (15, 15),
+        np.uint8
+    )
+
+    mask = cv2.morphologyEx(
+        mask,
+        cv2.MORPH_CLOSE,
+        kernel
+    )
+
+    mask = cv2.morphologyEx(
+        mask,
+        cv2.MORPH_OPEN,
+        kernel
+    )
+
+    return mask
+
+
+def _check_circularity(mask):
+
+    contours, _ = cv2.findContours(
+        mask,
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    if not contours:
+        return 0.0, 0.0
+
+    largest = max(
+        contours,
+        key=cv2.contourArea
+    )
+
+    area = cv2.contourArea(
+        largest
+    )
+
+    perimeter = cv2.arcLength(
+        largest,
+        True
+    )
+
+    if perimeter == 0 or area == 0:
+        return 0.0, 0.0
+
+    circularity = min(
+        (4 * np.pi * area) / (perimeter ** 2),
+        1.0
+    )
+
+    coverage_fraction = (
+        area /
+        (mask.shape[0] * mask.shape[1])
+    )
+
+    return (
+        circularity,
+        coverage_fraction
+    )
+
+
+def _check_fundus_color_signature(
+    img,
+    mask
+):
+
+    valid = mask > 0
+
+    if valid.sum() == 0:
+        return False, 0.0
+
+    b = img[:, :, 0][valid].mean()
+    g = img[:, :, 1][valid].mean()
+    r = img[:, :, 2][valid].mean()
+
+    if b < 1:
+        return False, 0.0
+
+    red_blue_ratio = r / b
+
+    is_plausible = (
+        red_blue_ratio > 1.15
+        and r >= g >= b * 0.9
+    )
+
+    return (
+        is_plausible,
+        round(
+            float(red_blue_ratio),
+            2
+        )
+    )
+
+
+def is_fundus_image(img):
+
+    reasons = []
+
+    mask = get_field_of_view_mask(
+        img
+    )
+
+    circularity, coverage = (
+        _check_circularity(mask)
+    )
+
+    color_ok, rb_ratio = (
+        _check_fundus_color_signature(
+            img,
+            mask
+        )
+    )
+
+    circularity_ok = (
+        circularity >= 0.55
+    )
+
+    coverage_ok = (
+        0.15 <= coverage <= 1.05
+    )
+
+    if not circularity_ok:
+
+        reasons.append(
+            f"No circular retinal field detected "
+            f"(circularity={circularity:.2f})."
+        )
+
+    if not coverage_ok:
+
+        reasons.append(
+            f"Illuminated field covers "
+            f"{coverage * 100:.1f}% of frame "
+            f"(expected 15-105%)."
+        )
+
+    if not color_ok:
+
+        reasons.append(
+            f"Color profile "
+            f"(R/B ratio={rb_ratio}) "
+            f"doesn't match fundus tissue signature."
+        )
+
+    is_valid = (
+        circularity_ok
+        and coverage_ok
+        and color_ok
+    )
+
+    confidence = 0.0
+
+    confidence += (
+        40 * min(
+            circularity / 0.55,
+            1.0
+        )
+        if circularity_ok
+        else 40 * (
+            circularity / 0.55
+        )
+    )
+
+    confidence += (
+        30
+        if coverage_ok
+        else 0
+    )
+
+    confidence += (
+        30
+        if color_ok
+        else 30 * min(
+            rb_ratio / 1.15,
+            1.0
+        )
+    )
+
+    confidence = round(
+        min(confidence, 100),
+        1
+    )
+
+    return {
+        "is_fundus": is_valid,
+        "confidence": confidence,
+        "reasons": reasons,
+        "diagnostics": {
+            "circularity": round(
+                float(circularity),
+                3
+            ),
+            "coverage_fraction": round(
+                float(coverage),
+                3
+            ),
+            "red_blue_ratio": rb_ratio,
+        },
+    }
+
+
+def check_blur(gray_img):
+
+    lap_var = cv2.Laplacian(
+        gray_img,
+        cv2.CV_64F
+    ).var()
+
+    return (
+        min(
+            100,
+            (lap_var / 150.0) * 100
+        ),
+        float(lap_var)
+    )
+
+
+def check_illumination(
+    gray_img,
+    mask
+):
+
+    valid_pixels = gray_img[
+        mask > 0
+    ]
+
+    if len(valid_pixels) == 0:
+        return 0, 0
+
+    mean_brightness = (
+        valid_pixels.mean()
+    )
+
+    if 80 <= mean_brightness <= 180:
+
+        score = 100
+
+    else:
+
+        score = max(
+            0,
+            100 - min(
+                abs(mean_brightness - 80),
+                abs(mean_brightness - 180)
+            )
+        )
+
+    return (
+        score,
+        float(mean_brightness)
+    )
+
+
+def check_contrast(
+    gray_img,
+    mask
+):
+
+    valid_pixels = gray_img[
+        mask > 0
+    ]
+
+    if len(valid_pixels) == 0:
+        return 0, 0
+
+    std = valid_pixels.std()
+
+    return (
+        min(
+            100,
+            (std / 50.0) * 100
+        ),
+        float(std)
+    )
+
+
+def check_field_of_view(
+    mask,
+    img_shape
+):
+
+    h, w = img_shape[:2]
+
+    expected_area = (
+        np.pi *
+        (min(h, w) / 2) ** 2
+    )
+
+    actual_area = np.sum(
+        mask > 0
+    )
+
+    return min(
+        100,
+        (actual_area / expected_area) * 100
+    )
+
+
+def assess_quality_from_numpy(img):
+
+    fundus_check = (
+        is_fundus_image(img)
+    )
+
+    if not fundus_check[
+        "is_fundus"
+    ]:
+
+        return {
+            "error": "Not a fundus photo.",
+            "is_fundus": False,
+            **fundus_check,
+        }
+
+    gray = cv2.cvtColor(
+        img,
+        cv2.COLOR_BGR2GRAY
+    )
+
+    fov_mask = (
+        get_field_of_view_mask(img)
+    )
+
+    blur_score, lap_var = (
+        check_blur(gray)
+    )
+
+    illum_score, brightness = (
+        check_illumination(
+            gray,
+            fov_mask
+        )
+    )
+
+    contrast_score, std = (
+        check_contrast(
+            gray,
+            fov_mask
+        )
+    )
+
+    fov_score = (
+        check_field_of_view(
+            fov_mask,
+            img.shape
+        )
+    )
+
+    overall = (
+        0.35 * blur_score
+        + 0.20 * illum_score
+        + 0.20 * contrast_score
+        + 0.25 * fov_score
+    )
+
+    suitable = (
+        overall >= 60
+    )
+
+    result = {
+        "is_fundus": True,
+        "fundus_confidence":
+            fundus_check["confidence"],
+        "overall_score":
+            round(float(overall), 1),
+        "suitable_for_screening":
+            bool(suitable),
+        "sub_scores": {
+            "blur":
+                round(float(blur_score), 1),
+            "illumination":
+                round(float(illum_score), 1),
+            "contrast":
+                round(float(contrast_score), 1),
+            "field_of_view":
+                round(float(fov_score), 1),
+        },
+    }
+
+    if not suitable:
+
+        reasons = []
+
+        if blur_score < 50:
+            reasons.append(
+                "image too blurry"
+            )
+
+        if illum_score < 50:
+            reasons.append(
+                "poor illumination"
+            )
+
+        if contrast_score < 50:
+            reasons.append(
+                "low contrast"
+            )
+
+        if fov_score < 50:
+            reasons.append(
+                "partial retina visible - recapture"
+            )
+
+        result[
+            "recapture_reasons"
+        ] = reasons
+
+    return result
+
+
+# ============================================================
+# 6. MODEL DEFINITION
+# ============================================================
+
+def build_model(
+    n_classes=5
+):
+
+    model = models.efficientnet_b3(
+        weights=None
+    )
+
+    in_features = (
+        model.classifier[1].in_features
+    )
 
     model.classifier[1] = nn.Linear(
         in_features,
@@ -51,172 +553,673 @@ def build_model(n_classes=5):
     return model
 
 
-# ---------------------------------------------------------
-# Load model
-# ---------------------------------------------------------
+# ============================================================
+# 7. LOAD MODEL
+# ============================================================
 
-model = build_model(n_classes=5)
+download_model_from_gdrive(
+    GDRIVE_FILE_ID,
+    MODEL_WEIGHTS_PATH
+)
 
-try:
+grading_model = (
+    build_model()
+    .to(DEVICE)
+)
 
-    state_dict = torch.load(
-        MODEL_PATH,
+grading_model.load_state_dict(
+    torch.load(
+        MODEL_WEIGHTS_PATH,
         map_location=DEVICE
     )
+)
 
-    model.load_state_dict(state_dict)
+print(
+    f"Successfully loaded model weights "
+    f"from '{MODEL_WEIGHTS_PATH}'"
+)
 
-    model.to(DEVICE)
-
-    model.eval()
-
-    print(
-        f"Loaded model successfully onto {DEVICE}"
-    )
-
-except Exception as e:
-
-    raise RuntimeError(
-        f"Failed to load model '{MODEL_PATH}': {e}"
-    )
+grading_model.eval()
 
 
-# ---------------------------------------------------------
-# Image preprocessing
-# ---------------------------------------------------------
+# ============================================================
+# 8. PREPROCESSING + SEVERITY PREDICTION
+# ============================================================
 
-def preprocess_image(image_bytes: bytes) -> torch.Tensor:
+def preprocess_image(
+    img_bgr,
+    img_size=IMG_SIZE,
+    device=DEVICE
+):
 
-    np_arr = np.frombuffer(
-        image_bytes,
-        np.uint8
-    )
-
-    img = cv2.imdecode(
-        np_arr,
-        cv2.IMREAD_COLOR
-    )
-
-    if img is None:
-
-        raise ValueError(
-            "Invalid image file"
-        )
-
-    img = cv2.cvtColor(
-        img,
+    img_rgb = cv2.cvtColor(
+        img_bgr,
         cv2.COLOR_BGR2RGB
     )
 
-    img = cv2.resize(
-        img,
-        (IMG_SIZE, IMG_SIZE)
+    img_resized = (
+        cv2.resize(
+            img_rgb,
+            (img_size, img_size)
+        )
+        .astype(np.float32)
+        / 255.0
     )
 
-    img = img.astype(
-        np.float32
-    ) / 255.0
+    mean = np.array(
+        [0.485, 0.456, 0.406]
+    )
 
-    # ImageNet normalization
-    mean = np.array([
-        0.485,
-        0.456,
-        0.406
-    ])
+    std = np.array(
+        [0.229, 0.224, 0.225]
+    )
 
-    std = np.array([
-        0.229,
-        0.224,
-        0.225
-    ])
+    img_norm = (
+        img_resized - mean
+    ) / std
 
-    img = (img - mean) / std
-
-    # HWC -> CHW
-    img_tensor = torch.from_numpy(
-        img.transpose(2, 0, 1)
-    ).float()
-
-    # Add batch dimension
-    img_tensor = img_tensor.unsqueeze(0)
-
-    # Move to CPU/GPU
-    img_tensor = img_tensor.to(DEVICE)
+    img_tensor = (
+        torch.from_numpy(
+            img_norm.transpose(2, 0, 1)
+        )
+        .float()
+        .unsqueeze(0)
+        .to(device)
+    )
 
     return img_tensor
 
 
-# ---------------------------------------------------------
-# Prediction endpoint
-# ---------------------------------------------------------
+def predict_severity_from_numpy(
+    model,
+    img_bgr,
+    img_size=IMG_SIZE,
+    device=DEVICE
+):
+
+    img_tensor = preprocess_image(
+        img_bgr,
+        img_size,
+        device
+    )
+
+    model.eval()
+
+    with torch.no_grad():
+
+        logits = model(
+            img_tensor
+        )
+
+        probs = (
+            torch.softmax(
+                logits,
+                dim=1
+            )
+            .cpu()
+            .numpy()[0]
+        )
+
+    pred_class = int(
+        np.argmax(probs)
+    )
+
+    confidence = float(
+        probs[pred_class]
+    ) * 100
+
+    return {
+        "class_idx":
+            pred_class,
+
+        "class_name":
+            DR_CLASS_NAMES[
+                pred_class
+            ],
+
+        "referable_dr":
+            pred_class >= 2,
+
+        "confidence":
+            round(
+                confidence,
+                2
+            ),
+
+        "probabilities": {
+            DR_CLASS_NAMES[i]:
+                round(
+                    float(p) * 100,
+                    2
+                )
+            for i, p in enumerate(probs)
+        },
+    }
+
+
+# ============================================================
+# 9. GRAD-CAM
+# ============================================================
+
+def get_target_layer(model):
+
+    return model.features[-1]
+
+
+class GradCAM:
+
+    def __init__(
+        self,
+        model,
+        target_layer
+    ):
+
+        self.model = model
+        self.gradients = None
+        self.activations = None
+
+        target_layer.register_forward_hook(
+            self._save_activation
+        )
+
+        target_layer.register_full_backward_hook(
+            self._save_gradient
+        )
+
+    def _save_activation(
+        self,
+        module,
+        input,
+        output
+    ):
+
+        self.activations = (
+            output.detach()
+        )
+
+    def _save_gradient(
+        self,
+        module,
+        grad_input,
+        grad_output
+    ):
+
+        self.gradients = (
+            grad_output[0].detach()
+        )
+
+    def generate(
+        self,
+        input_tensor,
+        target_class=None
+    ):
+
+        self.model.eval()
+
+        output = self.model(
+            input_tensor
+        )
+
+        if target_class is None:
+
+            target_class = (
+                torch.argmax(
+                    output,
+                    dim=1
+                ).item()
+            )
+
+        self.model.zero_grad()
+
+        output[
+            0,
+            target_class
+        ].backward()
+
+        weights = (
+            self.gradients.mean(
+                dim=(2, 3),
+                keepdim=True
+            )
+        )
+
+        cam = F.relu(
+            (
+                weights *
+                self.activations
+            ).sum(
+                dim=1,
+                keepdim=True
+            )
+        )
+
+        cam = (
+            cam
+            .squeeze()
+            .cpu()
+            .numpy()
+        )
+
+        cam = cv2.resize(
+            cam,
+            (
+                input_tensor.shape[3],
+                input_tensor.shape[2]
+            )
+        )
+
+        cam = (
+            cam - cam.min()
+        ) / (
+            cam.max()
+            - cam.min()
+            + 1e-8
+        )
+
+        return (
+            cam,
+            target_class
+        )
+
+
+def overlay_heatmap(
+    original_img,
+    cam,
+    alpha=0.4
+):
+
+    heatmap = cv2.applyColorMap(
+        (cam * 255).astype(
+            np.uint8
+        ),
+        cv2.COLORMAP_JET
+    )
+
+    heatmap = cv2.cvtColor(
+        heatmap,
+        cv2.COLOR_BGR2RGB
+    )
+
+    return cv2.addWeighted(
+        original_img,
+        1 - alpha,
+        heatmap,
+        alpha,
+        0
+    )
+
+
+
+
+def generate_full_resolution_gradcam_overlay(
+    model,
+    img_bgr,
+    target_class,
+    alpha=0.4
+):
+    """
+    Generate Grad-CAM for the predicted DR class and overlay it
+    directly on the original-resolution input fundus image.
+
+    The returned image is BGR and has exactly the same dimensions
+    as the uploaded input image.
+    """
+
+    input_tensor = preprocess_image(
+        img_bgr,
+        IMG_SIZE,
+        DEVICE
+    )
+
+    input_tensor.requires_grad_(True)
+
+    gradcam = GradCAM(
+        model,
+        get_target_layer(model)
+    )
+
+    cam, _ = gradcam.generate(
+        input_tensor,
+        target_class=target_class
+    )
+
+    h, w = img_bgr.shape[:2]
+
+    cam_full = cv2.resize(
+        cam,
+        (w, h),
+        interpolation=cv2.INTER_LINEAR
+    )
+
+    heatmap_bgr = cv2.applyColorMap(
+        (cam_full * 255).astype(np.uint8),
+        cv2.COLORMAP_JET
+    )
+
+    overlay_bgr = cv2.addWeighted(
+        img_bgr,
+        1 - alpha,
+        heatmap_bgr,
+        alpha,
+        0
+    )
+
+    return overlay_bgr
+
+def compute_lesion_correlation(
+    cam,
+    lesion_masks,
+    threshold=0.5
+):
+
+    high_activation = (
+        cam >= threshold
+    ).astype(np.uint8)
+
+    high_activation_area = (
+        np.sum(high_activation)
+    )
+
+    if (
+        high_activation_area == 0
+        or not lesion_masks
+    ):
+
+        return 0.0
+
+    combined = np.zeros_like(
+        high_activation
+    )
+
+    for lesion_info in (
+        lesion_masks.values()
+    ):
+
+        mask = cv2.resize(
+            lesion_info["mask"],
+            (
+                high_activation.shape[1],
+                high_activation.shape[0]
+            )
+        )
+
+        combined = np.maximum(
+            combined,
+            (mask > 0).astype(
+                np.uint8
+            )
+        )
+
+    overlap = np.sum(
+        high_activation &
+        combined
+    )
+
+    return round(
+        float(
+            overlap /
+            high_activation_area
+        ),
+        3
+    )
+
+
+# ============================================================
+# 10. TEXT REPORT
+# ============================================================
+
+def generate_report(
+    severity_result,
+    lesion_masks,
+    correlation_score,
+    quality_result,
+    patient_id="N/A"
+):
+
+    class_name = (
+        severity_result["class_name"]
+    )
+
+    confidence = (
+        severity_result["confidence"]
+    )
+
+    lesion_lines = []
+
+    for name, info in (
+        lesion_masks.items()
+    ):
+
+        if info.get(
+            "count",
+            0
+        ) > 0:
+
+            lesion_lines.append(
+                f"  - {info['count']} "
+                f"{name.replace('_', ' ').title()}"
+                f"(s) detected"
+            )
+
+    if not lesion_lines:
+
+        lesion_lines.append(
+            "  - No significant lesions detected"
+        )
+
+    recommendations = {
+
+        "No DR":
+            "Routine annual screening recommended.",
+
+        "Mild DR":
+            "Follow-up screening recommended within 12 months.",
+
+        "Moderate DR":
+            "Consult an ophthalmologist within 2-4 weeks.",
+
+        "Severe DR":
+            "Urgent ophthalmologist referral recommended within 1 week.",
+
+        "Proliferative DR":
+            "Immediate ophthalmologist referral required.",
+    }
+
+    trust_flag = (
+
+        "High correlation between AI attention "
+        "and detected lesions."
+
+        if correlation_score >= 0.5
+
+        else
+
+        "Low correlation - flag for manual review."
+    )
+
+    report = f"""
+{'=' * 60}
+DIABETIC RETINOPATHY SCREENING REPORT
+{'=' * 60}
+Patient ID: {patient_id}
+Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}
+
+IMAGE QUALITY: {quality_result['overall_score']}% - {'Suitable' if quality_result['suitable_for_screening'] else 'NOT SUITABLE - recapture'}
+
+SEVERITY ASSESSMENT: {class_name}
+Confidence: {confidence}%
+
+CLINICAL EVIDENCE:
+{chr(10).join(lesion_lines)}
+
+EXPLAINABILITY CHECK:
+{trust_flag}
+(Lesion-attention overlap score: {correlation_score})
+
+RECOMMENDATION:
+{recommendations.get(
+    class_name,
+    'Consult an ophthalmologist.'
+)}
+{'=' * 60}
+"""
+
+    return report.strip()
+
+
+# ============================================================
+# 11. IMAGE DECODING HELPER
+# ============================================================
+
+async def read_uploaded_image(
+    file: UploadFile
+):
+
+    if not file.content_type:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Missing image content type."
+        )
+
+    if not file.content_type.startswith(
+        "image/"
+    ):
+
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded file is not an image."
+        )
+
+    contents = await file.read()
+
+    if not contents:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded image is empty."
+        )
+
+    nparr = np.frombuffer(
+        contents,
+        np.uint8
+    )
+
+    img_bgr = cv2.imdecode(
+        nparr,
+        cv2.IMREAD_COLOR
+    )
+
+    if img_bgr is None:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid image file format."
+        )
+
+    return img_bgr
+
+
+# ============================================================
+# 12. HEALTH CHECK
+# ============================================================
+
+@app.get("/")
+def read_root():
+
+    return {
+        "status": "online",
+        "service":
+            "Explainable AI DR Screening API",
+        "device": DEVICE,
+    }
+
+
+# ============================================================
+# 13. MAIN BACKEND PREDICTION ENDPOINT
+# ============================================================
 
 @app.post("/predict")
 async def predict(
     file: UploadFile = File(...)
 ):
+    """
+    Backend-compatible ML endpoint.
 
-    if (
-        file.content_type
-        and not file.content_type.startswith("image/")
-    ):
+    Spring Boot calls this endpoint.
 
-        raise HTTPException(
-            status_code=400,
-            detail="Uploaded file must be an image."
-        )
+    Request:
+        multipart/form-data
+        file = retinal image
+
+    Response:
+        class_idx
+        class_name
+        referable_dr
+        confidence
+        probabilities
+        heatmap_image
+
+    heatmap_image is a PNG data URL containing the original
+    fundus image with a semi-transparent Grad-CAM overlay.
+    """
+
+    img_bgr = await read_uploaded_image(
+        file
+    )
 
     try:
 
-        contents = await file.read()
+        # ----------------------------------------------------
+        # Severity Prediction
+        # ----------------------------------------------------
 
-        tensor = preprocess_image(
-            contents
+        severity_result = (
+            predict_severity_from_numpy(
+                grading_model,
+                img_bgr,
+                device=DEVICE
+            )
         )
 
-        with torch.no_grad():
+        # ----------------------------------------------------
+        # Generate Grad-CAM overlay
+        # ----------------------------------------------------
 
-            logits = model(tensor)
-
-            probs = torch.softmax(
-                logits,
-                dim=1
-            ).cpu().numpy()[0]
-
-        pred_class = int(
-            np.argmax(probs)
+        overlay_bgr = (
+            generate_full_resolution_gradcam_overlay(
+                grading_model,
+                img_bgr,
+                severity_result["class_idx"],
+                alpha=0.4
+            )
         )
 
-        confidence = float(
-            probs[pred_class]
+        # ----------------------------------------------------
+        # Encode overlay as Base64 PNG
+        # ----------------------------------------------------
+
+        success, buffer = cv2.imencode(
+            ".png",
+            overlay_bgr
         )
 
-        return {
+        if not success:
+            raise RuntimeError(
+                "Failed to encode Grad-CAM overlay."
+            )
 
-            "class_idx": pred_class,
+        heatmap_b64 = (
+            base64.b64encode(
+                buffer.tobytes()
+            ).decode("utf-8")
+        )
 
-            "class_name":
-                DR_CLASS_NAMES[pred_class],
+        severity_result["heatmap_image"] = (
+            f"data:image/png;base64,{heatmap_b64}"
+        )
 
-            "referable_dr":
-                pred_class >= 2,
-
-            "confidence":
-                round(
-                    confidence * 100,
-                    2
-                ),
-
-            "probabilities": {
-
-                DR_CLASS_NAMES[i]:
-                    round(
-                        float(p) * 100,
-                        2
-                    )
-
-                for i, p in enumerate(probs)
-            }
-        }
+        return severity_result
 
     except Exception as e:
 
@@ -226,14 +1229,199 @@ async def predict(
         )
 
 
-# ---------------------------------------------------------
-# Health check
-# ---------------------------------------------------------
+# ============================================================
+# 14. FULL /api/screen ENDPOINT
+# ============================================================
 
-@app.get("/")
-def health_check():
+@app.post("/api/screen")
+async def screen_fundus_image(
+    file: UploadFile = File(...)
+):
+    """
+    Extended screening endpoint.
 
-    return {
-        "status": "online",
-        "device": DEVICE
-    }
+    This endpoint provides:
+    - Image quality assessment
+    - DR severity
+    - Grad-CAM heatmap
+    - Text report
+
+    Spring Boot currently uses /predict,
+    not this endpoint.
+    """
+
+    img_bgr = await read_uploaded_image(
+        file
+    )
+
+    try:
+
+        # ----------------------------------------------------
+        # Image Quality Assessment
+        # ----------------------------------------------------
+
+        quality_res = (
+            assess_quality_from_numpy(
+                img_bgr
+            )
+        )
+
+        if (
+            not quality_res.get(
+                "is_fundus",
+                False
+            )
+            or
+            not quality_res.get(
+                "suitable_for_screening",
+                False
+            )
+        ):
+
+            return {
+                "status": "rejected",
+
+                "message":
+                    "Image rejected during "
+                    "quality assessment. "
+                    "Please recapture.",
+
+                "quality":
+                    quality_res,
+            }
+
+        # ----------------------------------------------------
+        # Severity Prediction
+        # ----------------------------------------------------
+
+        severity_res = (
+            predict_severity_from_numpy(
+                grading_model,
+                img_bgr,
+                device=DEVICE
+            )
+        )
+
+        # ----------------------------------------------------
+        # Prepare Tensor for Grad-CAM
+        # ----------------------------------------------------
+
+        input_tensor = (
+            preprocess_image(
+                img_bgr,
+                IMG_SIZE,
+                DEVICE
+            )
+        )
+
+        input_tensor.requires_grad_(
+            True
+        )
+
+        # ----------------------------------------------------
+        # Grad-CAM
+        # ----------------------------------------------------
+
+        gradcam = GradCAM(
+            grading_model,
+            get_target_layer(
+                grading_model
+            )
+        )
+
+        cam, _ = gradcam.generate(
+            input_tensor,
+            target_class=
+                severity_res["class_idx"]
+        )
+
+        # ----------------------------------------------------
+        # Create Heatmap
+        # ----------------------------------------------------
+
+        img_rgb = cv2.cvtColor(
+            img_bgr,
+            cv2.COLOR_BGR2RGB
+        )
+
+        display_img = cv2.resize(
+            img_rgb,
+            (IMG_SIZE, IMG_SIZE)
+        )
+
+        overlaid_rgb = (
+            overlay_heatmap(
+                display_img,
+                cam
+            )
+        )
+
+        overlaid_bgr = cv2.cvtColor(
+            overlaid_rgb,
+            cv2.COLOR_RGB2BGR
+        )
+
+        # ----------------------------------------------------
+        # Encode Heatmap as Base64
+        # ----------------------------------------------------
+
+        _, buffer = cv2.imencode(
+            ".png",
+            overlaid_bgr
+        )
+
+        heatmap_b64 = (
+            base64.b64encode(
+                buffer
+            ).decode("utf-8")
+        )
+
+        # ----------------------------------------------------
+        # Generate Report
+        # ----------------------------------------------------
+
+        dummy_lesions = {}
+
+        correlation_score = (
+            compute_lesion_correlation(
+                cam,
+                dummy_lesions
+            )
+        )
+
+        report_text = (
+            generate_report(
+                severity_res,
+                dummy_lesions,
+                correlation_score,
+                quality_res
+            )
+        )
+
+        return {
+
+            "status": "success",
+
+            "quality":
+                quality_res,
+
+            "severity":
+                severity_res,
+
+            "heatmap_image":
+                f"data:image/png;base64,"
+                f"{heatmap_b64}",
+
+            "correlation_score":
+                correlation_score,
+
+            "report":
+                report_text,
+        }
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Screening error: {str(e)}"
+        )

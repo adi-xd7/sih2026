@@ -21,24 +21,67 @@ public class Screening {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
+    // ============================================================
+    // PATIENT
+    // ============================================================
+
     @ManyToOne
     @JoinColumn(name = "patient_id", nullable = false)
     private Patient patient;
 
+
+    // ============================================================
+    // ORIGINAL IMAGE
+    // ============================================================
+
     @Column(nullable = false)
     private String imagePath;
+
+
+    // ============================================================
+    // HEATMAP / EXPLAINABILITY IMAGE
+    // ============================================================
+
+    /*
+     * Path to the generated Grad-CAM overlay image.
+     *
+     * This is stored separately from the original fundus image.
+     *
+     * Example:
+     * uploads/heatmaps/uuid_heatmap.png
+     */
+    private String heatmapPath;
+
+
+    // ============================================================
+    // SCREENING STATUS
+    // ============================================================
 
     @Enumerated(EnumType.STRING)
     private ScreeningStatus status;
 
+
+    // ============================================================
+    // DR GRADE
+    // ============================================================
+
     @Enumerated(EnumType.STRING)
     private DrGrade drGrade;
+
+
+    // ============================================================
+    // PREDICTION
+    // ============================================================
 
     private Double confidence;
 
     private Boolean referable;
 
-    private LocalDateTime createdAt;
+
+    // ============================================================
+    // PROBABILITIES
+    // ============================================================
 
     @Column(name = "prob_no_dr")
     private Double probabilityNoDr;
@@ -55,107 +98,206 @@ public class Screening {
     @Column(name = "prob_proliferative_dr")
     private Double probabilityProliferativeDr;
 
+
+    // ============================================================
+    // CREATED AT
+    // ============================================================
+
+    private LocalDateTime createdAt;
+
+
+    // ============================================================
+    // CONSTRUCTOR
+    // ============================================================
+
     public Screening() {
+
         this.createdAt = LocalDateTime.now();
+
         this.status = ScreeningStatus.UPLOADED;
     }
 
-    // getters and setters
+
+    // ============================================================
+    // ID
+    // ============================================================
+
     public Long getId() {
         return id;
-    }
-
-    public Patient getPatient() {
-        return patient;
-    }
-
-    public String getImagePath() {
-        return imagePath;
-    }
-
-    public ScreeningStatus getStatus() {
-        return status;
-    }
-
-    public DrGrade getDrGrade() {
-        return drGrade;
-    }
-
-    public Double getConfidence() {
-        return confidence;
-    }
-
-    public Boolean getReferable() {
-        return referable;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
     }
 
     public void setId(Long id) {
         this.id = id;
     }
 
+
+    // ============================================================
+    // PATIENT
+    // ============================================================
+
+    public Patient getPatient() {
+        return patient;
+    }
+
     public void setPatient(Patient patient) {
         this.patient = patient;
+    }
+
+
+    // ============================================================
+    // ORIGINAL IMAGE PATH
+    // ============================================================
+
+    public String getImagePath() {
+        return imagePath;
     }
 
     public void setImagePath(String imagePath) {
         this.imagePath = imagePath;
     }
 
+
+    // ============================================================
+    // HEATMAP PATH
+    // ============================================================
+
+    public String getHeatmapPath() {
+        return heatmapPath;
+    }
+
+    public void setHeatmapPath(String heatmapPath) {
+        this.heatmapPath = heatmapPath;
+    }
+
+
+    // ============================================================
+    // STATUS
+    // ============================================================
+
+    public ScreeningStatus getStatus() {
+        return status;
+    }
+
     public void setStatus(ScreeningStatus status) {
         this.status = status;
+    }
+
+
+    // ============================================================
+    // DR GRADE
+    // ============================================================
+
+    public DrGrade getDrGrade() {
+        return drGrade;
     }
 
     public void setDrGrade(DrGrade drGrade) {
         this.drGrade = drGrade;
     }
 
+
+    // ============================================================
+    // CONFIDENCE
+    // ============================================================
+
+    public Double getConfidence() {
+        return confidence;
+    }
+
     public void setConfidence(Double confidence) {
         this.confidence = confidence;
+    }
+
+
+    // ============================================================
+    // REFERABLE
+    // ============================================================
+
+    public Boolean getReferable() {
+        return referable;
     }
 
     public void setReferable(Boolean referable) {
         this.referable = referable;
     }
 
+
+    // ============================================================
+    // CREATED AT
+    // ============================================================
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+
+    // ============================================================
+    // NO DR PROBABILITY
+    // ============================================================
 
     public Double getProbabilityNoDr() {
         return probabilityNoDr;
     }
 
-    public void setProbabilityNoDr(Double probabilityNoDr) {
+    public void setProbabilityNoDr(
+            Double probabilityNoDr) {
+
         this.probabilityNoDr = probabilityNoDr;
     }
+
+
+    // ============================================================
+    // MILD DR PROBABILITY
+    // ============================================================
 
     public Double getProbabilityMildDr() {
         return probabilityMildDr;
     }
 
-    public void setProbabilityMildDr(Double probabilityMildDr) {
+    public void setProbabilityMildDr(
+            Double probabilityMildDr) {
+
         this.probabilityMildDr = probabilityMildDr;
     }
+
+
+    // ============================================================
+    // MODERATE DR PROBABILITY
+    // ============================================================
 
     public Double getProbabilityModerateDr() {
         return probabilityModerateDr;
     }
 
-    public void setProbabilityModerateDr(Double probabilityModerateDr) {
+    public void setProbabilityModerateDr(
+            Double probabilityModerateDr) {
+
         this.probabilityModerateDr = probabilityModerateDr;
     }
+
+
+    // ============================================================
+    // SEVERE DR PROBABILITY
+    // ============================================================
 
     public Double getProbabilitySevereDr() {
         return probabilitySevereDr;
     }
 
-    public void setProbabilitySevereDr(Double probabilitySevereDr) {
+    public void setProbabilitySevereDr(
+            Double probabilitySevereDr) {
+
         this.probabilitySevereDr = probabilitySevereDr;
     }
+
+
+    // ============================================================
+    // PROLIFERATIVE DR PROBABILITY
+    // ============================================================
 
     public Double getProbabilityProliferativeDr() {
         return probabilityProliferativeDr;
@@ -163,8 +305,8 @@ public class Screening {
 
     public void setProbabilityProliferativeDr(
             Double probabilityProliferativeDr) {
-        this.probabilityProliferativeDr
-                = probabilityProliferativeDr;
-    }
 
+        this.probabilityProliferativeDr =
+                probabilityProliferativeDr;
+    }
 }
